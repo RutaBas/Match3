@@ -1,0 +1,16 @@
+{
+  "name": "Tide Pool",
+  "short_name": "Tide Pool",
+  "description": "A match-3 descent through deepening tide pools. Swap neighbouring creatures to line up 3+, chase the current, and dive the Depths.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17292A",
+  "theme_color": "#17292A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

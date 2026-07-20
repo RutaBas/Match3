@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Tide Pool</title>
+
+  <meta name="theme-color" content="#17292A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tide Pool">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ shared animated water background ============ -->
+  <div class="water" id="water" aria-hidden="true">
+    <div class="caustic"></div>
+    <div class="rays" id="rays"></div>
+    <div class="bubbles" id="bubbles"></div>
+  </div>
+
+  <!-- ===================== HOME / DEPTH MAP ===================== -->
+  <main id="screen-home" class="screen active">
+    <div class="kelp-layer" id="kelpLayer" aria-hidden="true"></div>
+    <div class="creatures-bg" id="creaturesBg" aria-hidden="true"></div>
+    <div class="seabed" aria-hidden="true"></div>
+
+    <div class="home-content">
+      <div class="home-top">
+        <div class="pearl" aria-hidden="true"></div>
+        <div class="title">TIDE&nbsp;POOL</div>
+        <div class="tag">a match-3 descent</div>
+        <div class="statbar">
+          <span>&#11088; <b id="stat-stars">0</b></span>
+          <span>&#127754; Depth <b id="stat-depth">1</b></span>
+          <span>&#128293; <b id="stat-streak">0</b></span>
+        </div>
+        <button class="play" id="btn-continue">Continue</button>
+        <button class="howto-link" id="btn-howto">How to play</button>
+      </div>
+      <div class="trail" id="trail">
+        <div class="trail-inner" id="trailInner"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== GAME ===================== -->
+  <main id="screen-game" class="screen">
+    <div class="gamebar">
+      <button id="btn-back" class="iconbtn" aria-label="Back to map">&#8592;</button>
+      <span class="depth-pill" id="depthPill">Depth 1</span>
+      <span class="moves-pill">moves&nbsp;<b id="movesLeft">5</b></span>
+      <button id="btn-mute" class="iconbtn" aria-label="Mute">&#128266;</button>
+    </div>
+
+    <div class="progress">
+      <div class="pbar"><i id="pbarFill"></i></div>
+      <div class="pscore"><b id="scoreNow">0</b> <span>/ <b id="scoreTarget">0</b></span></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+      <div class="board-fx" id="boardFx" aria-hidden="true"></div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-undo" class="act" disabled><span class="ai">&#8630;</span>Undo</button>
+      <button id="btn-hint" class="act"><span class="ai">&#9788;</span>Hint</button>
+    </div>
+  </main>
+
+  <!-- ===================== WIN — "Surfaced" ===================== -->
+  <main id="screen-win" class="screen">
+    <div class="ripple-layer" id="rippleLayer" aria-hidden="true"></div>
+    <div class="plankton-layer" id="planktonLayer" aria-hidden="true"></div>
+    <div class="hud">
+      <span class="depth">Depth <b id="win-depth">1</b></span>
+      <span class="bar"><i style="width:100%"></i></span>
+      <span class="mv">&#10003;</span>
+    </div>
+    <div class="center">
+      <div class="badge">&#129767;</div>
+      <div class="win-h">Surfaced!</div>
+      <div class="win-sub">Depth <b id="win-depth2">1</b> cleared</div>
+      <div class="starrow" id="win-stars">&#9733; &#9733; &#9733;</div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="win-score">0</div><div class="l">Score</div></div>
+        <div class="stat"><div class="n" id="win-moves">0</div><div class="l">Moves</div></div>
+        <div class="stat"><div class="n" id="win-streak">0</div><div class="l">Streak</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" id="btn-win-map">Map</button>
+        <button class="btn primary" id="btn-win-next">Next Depth</button>
+      </div>
+      <button class="share" id="btn-share">&#8599; Share your dive</button>
+    </div>
+  </main>
+
+  <!-- ===================== LOSE — "Washed out" ===================== -->
+  <main id="screen-lose" class="screen">
+    <div class="hud">
+      <span class="depth">Depth <b id="lose-depth">1</b></span>
+      <span class="bar"><i id="lose-bar" style="width:0%"></i></span>
+      <span class="mv">0</span>
+    </div>
+    <div class="center">
+      <div class="lose-badge">&#127754;</div>
+      <div class="lose-h">Washed out</div>
+      <div class="win-sub" id="lose-msg">&mdash;</div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="lose-score">0</div><div class="l">Score</div></div>
+        <div class="stat"><div class="n" id="lose-pct">0%</div><div class="l">of target</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" id="btn-lose-map">Map</button>
+        <button class="btn primary" id="btn-lose-retry">Retry Depth</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== HINT "thinking" ===================== -->
+  <div id="thinking" class="thinking" hidden>
+    <div class="thinking-dot"></div>
+    <div class="thinking-text">reading the current&hellip;</div>
+  </div>
+
+  <!-- ===================== HOW TO PLAY ===================== -->
+  <div id="howto" class="modal" hidden>
+    <div class="panel">
+      <b>How to play</b>
+      <ul class="how">
+        <li><span>&#128260;</span> Tap a creature, then a <b>neighbour</b>, to swap them (or swipe one into the other).</li>
+        <li><span>&#10024;</span> Line up <b>3 or more</b> of a kind &mdash; they bloom and clear for score.</li>
+        <li><span>&#127754;</span> Match <b>4</b> to form a <b>current</b> (stripe) that sweeps a whole row or column.</li>
+        <li><span>&#128142;</span> Match <b>5</b> to form a <b>pearl</b> &mdash; swap it to clear every creature of one colour.</li>
+        <li><span>&#127937;</span> Reach the <b>target</b> before your moves run out to surface and unlock the next Depth.</li>
+      </ul>
+      <button id="howto-close" class="btn primary wide">Dive in</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="src/rng.js"></script>
+  <script src="src/logic.js"></script>
+  <script src="src/solver.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Dependencies / build cruft
+node_modules/
+package-lock.json
+
+# Test artifacts
+test/shot-*.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
+
+# Design-process VISUAL artifacts (kept on disk, not shipped in the repo)
+design-moodboard.html
+design-screens.html
+design-sound.html
+design-*.html
+accent-compare*.html
+*-review.html
+
+# design-brief.md IS committed (useful documentation). Remove the leading
+# "# " below if you'd rather keep the written brief local-only:
+# design-brief.md
