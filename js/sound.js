@@ -110,6 +110,14 @@
     bad: function () {
       if (muted) return;
       voice(150, 0.16, { type: "square", g: 0.1, bendTo: 110 });
+    },
+
+    // Crab Claw booster — a crisp woody "snip-snip" then a low chomp
+    claw: function () {
+      if (muted) return;
+      wood(988, 0, 0.22, 0.09);
+      wood(1319, 0.07, 0.22, 0.09);
+      wood(494, 0.17, 0.18, 0.22);
     }
   };
 

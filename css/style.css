@@ -215,6 +215,23 @@ b{ font-variant-numeric:tabular-nums; }
 body.claw-armed #board .tile{ cursor:crosshair; }
 body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 
+/* Crab Claw booster animation: the crab scuttles in, pinches, darts off. The
+   outer .claw-fx centers on the target tile; the inner span carries the moves. */
+.claw-fx{ position:absolute; z-index:40; pointer-events:none; transform:translate(-50%,-50%);
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
+.claw-fx .emo{ display:block; }
+.claw-fx .emo.in{ animation:clawIn .28s cubic-bezier(.2,.9,.3,1.2) both; }
+.claw-fx .emo.snip{ animation:clawSnip .24s ease both; }
+.claw-fx .emo.out{ animation:clawOut .3s ease-in both; }
+@keyframes clawIn{ from{ transform:translate(70px,90px) rotate(50deg) scale(.4); opacity:0; }
+  to{ transform:translate(0,0) rotate(-12deg) scale(1); opacity:1; } }
+@keyframes clawSnip{ 0%{ transform:rotate(-12deg) scale(1); }
+  35%{ transform:rotate(2deg) scale(.8); } 65%{ transform:rotate(-18deg) scale(1.12); }
+  100%{ transform:rotate(-12deg) scale(1); } }
+@keyframes clawOut{ to{ transform:translate(80px,-50px) rotate(40deg) scale(.35); opacity:0; } }
+.tile.pinched .blob{ animation:pinch .24s ease; }
+@keyframes pinch{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(.76) rotate(-7deg); } }
+
 .reward{ display:flex; flex-direction:column; align-items:center; gap:2px; margin:0 0 var(--sp3); }
 .reward-total{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.1rem; color:var(--gold); }
 .reward-detail{ font-size:.72rem; color:var(--sub); }

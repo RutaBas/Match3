@@ -533,9 +533,42 @@
     var res = L.resolveInternal(G.board, G.refill, G.pointers,
       { type: "clear", cells: [{ r: cell.r, c: cell.c }] }, trace);
     G.freeMove = true;
-    SND.special();
-    buzz(12);
-    animateResolution(null, null, res, trace, true);
+    playClawFx(cell, function () {
+      animateResolution(null, null, res, trace, true);
+    });
+  }
+
+  // The claw show: crab scuttles in from the lower-right, pinches the target
+  // (tile squeezes, sparks fly, "snip-snip" sound), then darts away as the
+  // engine resolution takes over.
+  function playClawFx(cell, done) {
+    if (prefersReduced()) { (SND.claw || SND.special)(); done(); return; }
+    var fx = $("boardFx"), ts = G.geom.ts;
+    var brect = $("board").getBoundingClientRect(), wrect = fx.getBoundingClientRect();
+    var cx = brect.left - wrect.left + cell.c * ts + ts / 2;
+    var cy = brect.top - wrect.top + cell.r * ts + ts / 2;
+    var claw = document.createElement("div");
+    claw.className = "claw-fx";
+    claw.style.left = cx + "px"; claw.style.top = cy + "px";
+    var emo = document.createElement("span");
+    emo.className = "emo in"; emo.textContent = "🦀"; // crab
+    emo.style.fontSize = Math.round(ts * 1.05) + "px";
+    claw.appendChild(emo); fx.appendChild(claw);
+    setTimeout(function () {                       // arrived — SNIP
+      emo.className = "emo snip";
+      var el = G.els[cell.r + "," + cell.c];
+      if (el) {
+        el.classList.add("pinched");
+        setTimeout(function () { el.classList.remove("pinched"); }, 280);
+      }
+      (SND.claw || SND.special)(); buzz([8, 24, 12]);
+      spawnSparks(cell.r, cell.c);
+      setTimeout(function () {                     // dart away, hand over
+        emo.className = "emo out";
+        setTimeout(function () { if (claw.parentNode) claw.parentNode.removeChild(claw); }, 320);
+        done();
+      }, 250);
+    }, 290);
   }
 
   // Rip Current: reshuffle the board (no move consumed). Retries until the
