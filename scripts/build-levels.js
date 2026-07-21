@@ -53,14 +53,18 @@ function argVal(flag, dflt) {
   var i = argv.indexOf(flag);
   return (i >= 0 && argv[i + 1]) ? argv[i + 1] : dflt;
 }
-var TOTAL = parseInt(argVal("--count", "24"), 10);
+var TOTAL = parseInt(argVal("--count", "40"), 10);
 
-// Depth -> tier band. Split the campaign into equal easy / medium / hard thirds.
-function tierForDepth(depth, total) {
-  var third = Math.ceil(total / 3);
-  if (depth <= third) return "easy";
-  if (depth <= 2 * third) return "medium";
-  return "hard";
+// Depth -> tier band.
+// Depths 1-24 are the ORIGINAL campaign and their structure is FROZEN (equal
+// thirds of 24) so rebuilds reproduce them byte-identically for shipped players.
+// Depths 25+ extend in waves like the big match-3 games: one medium "breather"
+// then three hard, repeating (25 M, 26-28 H, 29 M, 30-32 H, ...).
+function tierForDepth(depth) {
+  if (depth <= 8) return "easy";
+  if (depth <= 16) return "medium";
+  if (depth <= 24) return "hard";
+  return ((depth - 25) % 4 === 0) ? "medium" : "hard";
 }
 
 // Star max search: bounded so the build stays quick. The returned score is a
@@ -76,8 +80,12 @@ function round60(x) { return Math.round(x / 60) * 60; }
 // up as you descend: gentle at Depth 1, full-challenge by the last Depth. Because
 // winTarget <= certified target <= an exhibited achievable line, every Depth stays
 // provably winnable; the certification (tier grading) still uses the certified target.
-function winTargetFor(certTarget, depth, total) {
-  var f = 0.35 + 0.65 * (total > 1 ? (depth - 1) / (total - 1) : 1); // 0.35 -> 1.0
+function winTargetFor(certTarget, depth) {
+  // FROZEN ramp: 0.35 at Depth 1 -> 1.0 at Depth 24, anchored to 24 forever so
+  // extending the campaign never changes shipped targets. Depths 25+ cap at 0.9
+  // of the certified score: hard, but with lasting slack for imperfect play
+  // (demanding the full certified score means perfect play — Depth-24-only).
+  var f = (depth > 24) ? 0.9 : (0.35 + 0.65 * (depth - 1) / 23);
   var wt = round60(certTarget * f);
   if (wt < 60) wt = 60;
   if (wt > certTarget) wt = certTarget;
@@ -122,13 +130,16 @@ function build() {
     // The opening Depths are meant to be gentle & teach the mechanic, so grant
     // bonus moves that taper off: +3 (Depths 1-2), +2 (3-4), +1 (5-6), +0 after.
     var moveBonus = Math.max(0, 4 - Math.ceil(depth / 2));
-    // Hard-band rebalance (players were stuck at 5 moves): from Depth 18 on,
-    // extra moves that taper as you descend — 18: +3 (8 mv), 19-20: +2 (7 mv),
-    // 21-24: +1 (6 mv). Depths 1-17 are DELIBERATELY untouched so a rebuild
-    // reproduces them byte-identically and existing players' records stay true.
+    // Hard-band rebalance (players were stuck at 5 moves): 18: +3 (8 mv),
+    // 19-20: +2 (7 mv), 21-24: +1 (6 mv). Depths 1-17 are DELIBERATELY
+    // untouched so a rebuild reproduces them byte-identically and existing
+    // players' records stay true.
     if (depth === 18) moveBonus += 3;
     else if (depth >= 19 && depth <= 20) moveBonus += 2;
-    else if (depth >= 21) moveBonus += 1;
+    else if (depth >= 21 && depth <= 24) moveBonus += 1;
+    // Extension (25+): hard levels keep the post-rebalance 6-move budget
+    // (never back to 5); medium breathers use their normal 6.
+    if (depth >= 25 && tier === "hard") moveBonus += 1;
     var budget = generator.TIERS[tier].budget + moveBonus;
 
     var lvl = generator.generate(tier, seed, { budget: budget });
