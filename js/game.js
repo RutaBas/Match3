@@ -981,16 +981,46 @@
       progress.streak = 0; saveProgress();
       lsDel("tp-save");
     }
+    var pct = Math.max(0, Math.round(G.score / G.target * 100));
+    var short = Math.max(0, G.target - G.score);
+    // encouraging copy that scales with how close you got
+    var head, msg;
+    if (pct >= 90) { head = "So close!"; msg = "A whisker away — the tide is basically yours."; }
+    else if (pct >= 70) { head = "Almost surfaced"; msg = "You've got the rhythm now. One more dive."; }
+    else if (pct >= 40) { head = "Washed out"; msg = "Regroup and try a fresh line down."; }
+    else { head = "Washed out"; msg = "Shake off the salt and dive again."; }
     $("lose-depth").textContent = G.depth;
-    $("lose-score").textContent = G.score;
-    var pct = Math.round(G.score / G.target * 100);
+    $("lose-h").textContent = head;
+    $("lose-msg").textContent = msg;
+    $("lose-target").textContent = G.target;
+    $("lose-short").textContent = short;
     $("lose-pct").textContent = pct + "%";
     $("lose-bar").style.width = Math.min(100, pct) + "%";
-    $("lose-msg").innerHTML = G.score + " / " + G.target + " &mdash; " +
-      (pct >= 80 ? "so close. The tide will turn." : "regroup and dive again.");
+    $("lose-prog-fill").style.width = "0%";
+    // gentle rising bubbles (life, not a celebration); a near-miss adds gold ones
+    var bub = $("loseBubbles"); bub.innerHTML = "";
+    if (!prefersReduced()) {
+      for (var i = 0; i < 16; i++) {
+        var b = document.createElement("div"); b.className = "lb";
+        var sz = 4 + Math.random() * 9;
+        b.style.width = b.style.height = sz + "px";
+        b.style.left = Math.random() * 100 + "%";
+        b.style.animationDuration = (6 + Math.random() * 7) + "s";
+        b.style.animationDelay = (Math.random() * 5) + "s";
+        if (pct >= 90 && Math.random() < 0.4) {
+          b.style.background = "rgba(203,178,122,.3)";
+          b.style.boxShadow = "0 0 7px rgba(203,178,122,.5)";
+        }
+        bub.appendChild(b);
+      }
+    }
     document.body.classList.add("lose-desat");
     SND.lose(); buzz([12, 30, 12]);
-    setTimeout(function () { show("lose"); }, prefersReduced() ? 0 : 620);
+    setTimeout(function () {
+      show("lose");
+      countUp($("lose-score"), G.score, 800);
+      $("lose-prog-fill").style.width = Math.min(100, pct) + "%";
+    }, prefersReduced() ? 0 : 620);
   }
 
   // ------------------------------------------------------------- share --
@@ -1246,6 +1276,23 @@
     });
     $("btn-mute").addEventListener("click", function () {
       SND.toggle(); updateHUD(); if (!SND.isMuted()) SND.select();
+    });
+
+    // settings
+    $("btn-settings").addEventListener("click", function () {
+      SND.resume();
+      $("set-sound").setAttribute("aria-checked", SND.isMuted() ? "false" : "true");
+      $("settings-modal").hidden = false;
+    });
+    $("settings-close").addEventListener("click", function () { $("settings-modal").hidden = true; });
+    $("set-sound").addEventListener("click", function () {
+      var muted = SND.toggle();                 // returns the NEW muted state
+      this.setAttribute("aria-checked", muted ? "false" : "true");
+      $("btn-mute").innerHTML = muted ? "&#128263;" : "&#128266;";  // keep in-game icon in sync
+      if (!muted) SND.select();
+    });
+    $("set-howto").addEventListener("click", function () {
+      $("settings-modal").hidden = true; $("howto").hidden = false;
     });
 
     // win

@@ -32,6 +32,7 @@
     <div class="kelp-layer" id="kelpLayer" aria-hidden="true"></div>
     <div class="creatures-bg" id="creaturesBg" aria-hidden="true"></div>
     <div class="seabed" aria-hidden="true"></div>
+    <button id="btn-settings" class="home-gear" aria-label="Settings">&#9881;</button>
 
     <div class="home-content">
       <div class="home-top">
@@ -122,25 +123,45 @@
 
   <!-- ===================== LOSE — "Washed out" ===================== -->
   <main id="screen-lose" class="screen">
+    <div class="lose-bubbles" id="loseBubbles" aria-hidden="true"></div>
     <div class="hud">
       <span class="depth">Depth <b id="lose-depth">1</b></span>
       <span class="bar"><i id="lose-bar" style="width:0%"></i></span>
       <span class="mv">0</span>
     </div>
     <div class="center">
-      <div class="lose-badge">&#127754;</div>
-      <div class="lose-h">Washed out</div>
+      <div class="lose-badge" id="lose-badge">&#127754;</div>
+      <div class="lose-h" id="lose-h">Washed out</div>
       <div class="win-sub" id="lose-msg">&mdash;</div>
+      <div class="lose-progress">
+        <div class="lose-progress-bar"><i id="lose-prog-fill"></i></div>
+        <div class="lose-progress-label"><b id="lose-pct">0%</b> of the way there</div>
+      </div>
       <div class="stats">
         <div class="stat"><div class="n" id="lose-score">0</div><div class="l">Score</div></div>
-        <div class="stat"><div class="n" id="lose-pct">0%</div><div class="l">of target</div></div>
+        <div class="stat"><div class="n" id="lose-target">0</div><div class="l">Target</div></div>
+        <div class="stat"><div class="n" id="lose-short">0</div><div class="l">Short by</div></div>
       </div>
       <div class="btn-row">
         <button class="btn ghost" id="btn-lose-map">Map</button>
-        <button class="btn primary" id="btn-lose-retry">Retry Depth</button>
+        <button class="btn primary" id="btn-lose-retry">Dive again</button>
       </div>
     </div>
   </main>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <div id="settings-modal" class="modal" hidden>
+    <div class="panel settings-panel">
+      <b>Settings</b>
+      <div class="setting-row">
+        <span class="set-label">&#127925; Sound</span>
+        <button id="set-sound" class="toggle" role="switch" aria-checked="true"><span class="knob"></span></button>
+      </div>
+      <button id="set-howto" class="btn ghost wide">How to play</button>
+      <div class="settings-foot">Tide Pool &middot; a solver-verified match-3 descent</div>
+      <button id="settings-close" class="btn primary wide">Done</button>
+    </div>
+  </div>
 
   <!-- ===================== HINT "thinking" ===================== -->
   <div id="thinking" class="thinking" hidden>
