@@ -276,6 +276,9 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .panel{ background:var(--panel); border-radius:20px; padding:var(--sp4); max-width:360px; width:100%;
   box-shadow:0 20px 50px rgba(0,0,0,.5); }
 .panel>b{ font-family:'Quicksand'; font-weight:700; font-size:1.3rem; color:var(--aqua); display:block; margin-bottom:var(--sp3); }
+.howto-panel{ max-height:min(82vh, 640px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.how-h{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.02rem; color:var(--gold);
+  display:block; margin:var(--sp3) 0 var(--sp2); }
 .how{ list-style:none; margin:0 0 var(--sp3); padding:0; }
 /* block (not flex) so the sentence + its <b> words flow and wrap as one line of
    text; the icon sits in an absolute left gutter. */

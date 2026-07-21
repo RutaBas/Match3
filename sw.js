@@ -1,6 +1,7 @@
-/* Tide Pool service worker — cache-first app shell for offline play.
-   Bump CACHE_NAME on every deploy to invalidate the old shell. */
-var CACHE_NAME = "tide-pool-v2";   // v2: Phase 2 shell economy + boosters
+/* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
+   Online play always gets the latest deployed version after a single reload;
+   the cache exists purely so the game still opens offline. */
+var CACHE_NAME = "tide-pool-v3";   // v3: network-first updates
 
 var LOCAL_ASSETS = [
   "./",
@@ -49,23 +50,37 @@ self.addEventListener("activate", function (e) {
 
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request, { ignoreVary: true }).then(function (hit) {
-      if (hit) return hit;
-      return fetch(e.request).then(function (res) {
-        var url = e.request.url;
-        var cacheable =
-          res &&
-          (res.ok || res.type === "opaque") &&
-          (url.indexOf(self.location.origin) === 0 ||
-           url.indexOf("https://fonts.gstatic.com/") === 0 ||
-           url.indexOf("https://fonts.googleapis.com/") === 0);
-        if (cacheable) {
+  var url = e.request.url;
+  var isFont = url.indexOf("https://fonts.gstatic.com/") === 0 ||
+               url.indexOf("https://fonts.googleapis.com/") === 0;
+  var isLocal = url.indexOf(self.location.origin) === 0;
+
+  // Fonts: cache-first (immutable, and network-first would slow every load).
+  if (isFont) {
+    e.respondWith(
+      caches.match(e.request, { ignoreVary: true }).then(function (hit) {
+        return hit || fetch(e.request).then(function (res) {
           var clone = res.clone();
           caches.open(CACHE_NAME).then(function (c) { c.put(e.request, clone); });
-        }
-        return res;
-      }).catch(function () { return hit; });
+          return res;
+        });
+      })
+    );
+    return;
+  }
+  if (!isLocal) return;
+
+  // App shell: network-first so a deploy reaches players on their next reload;
+  // fall back to the cached copy when offline.
+  e.respondWith(
+    fetch(e.request).then(function (res) {
+      if (res && res.ok) {
+        var clone = res.clone();
+        caches.open(CACHE_NAME).then(function (c) { c.put(e.request, clone); });
+      }
+      return res;
+    }).catch(function () {
+      return caches.match(e.request, { ignoreVary: true });
     })
   );
 });
