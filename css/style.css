@@ -174,18 +174,21 @@ b{ font-variant-numeric:tabular-nums; }
 .blob.stripe-h::after{ left:6%; right:6%; height:16%; top:42%; border-radius:99px; }
 .blob.stripe-v::after{ top:6%; bottom:6%; width:16%; left:42%; border-radius:99px;
   background:linear-gradient(180deg,transparent,rgba(255,255,255,.85),transparent); }
+/* PEARL (color bomb) — iridescent shimmer + a breathing scale/glow pulse so it
+   stands out as the strongest special on the board. */
 .blob.bomb{ background:radial-gradient(circle at 38% 32%, #fff, #cfe6df 42%, #8fb7ad 78%) !important;
-  box-shadow:0 0 16px rgba(143,183,173,.9), inset 0 0 10px rgba(255,255,255,.6); animation:pearlshimmer 2.4s ease-in-out infinite; }
+  animation:pearlshimmer 2.4s ease-in-out infinite, pearlbreathe 1.6s ease-in-out infinite; }
 .blob.bomb::before{ opacity:.9; }
 @keyframes pearlshimmer{ 0%,100%{ filter:hue-rotate(0) brightness(1);} 50%{ filter:hue-rotate(-18deg) brightness(1.15);} }
-/* URCHIN — must be readable at a glance: a spinning gold dashed ring outside
-   the blob + a dual-stroke (dark under white) spike emblem + a breathing pulse.
+@keyframes pearlbreathe{
+  0%,100%{ transform:scale(1);    box-shadow:0 0 16px rgba(143,183,173,.9), inset 0 0 10px rgba(255,255,255,.6); }
+  50%    { transform:scale(1.08); box-shadow:0 0 28px 5px rgba(180,214,205,1), inset 0 0 13px rgba(255,255,255,.75); } }
+/* URCHIN — a spinning gold dashed ring outside the blob + a breathing pulse.
    Gold is the "special" accent and contrasts on every creature hue. */
 .blob.urchin{ animation:urchinpulse 1.3s ease-in-out infinite; }
 .blob.urchin::after{ content:""; position:absolute; inset:-4px; border-radius:inherit;
   border:2.5px dashed var(--gold); animation:urchinspin 5s linear infinite;
   box-shadow:0 0 10px rgba(203,178,122,.55); z-index:1; }
-.blob.urchin svg{ width:66%; height:66%; opacity:1; }
 @keyframes urchinspin{ to{ transform:rotate(360deg); } }
 @keyframes urchinpulse{
   0%,100%{ transform:scale(1);   box-shadow:0 2px 8px rgba(0,0,0,.35), 0 0 12px var(--gold); }

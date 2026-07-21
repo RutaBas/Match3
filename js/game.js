@@ -237,15 +237,9 @@
     else if (cd.kind === "bomb") kindClass += " bomb";
     else if (cd.kind === "urchin") kindClass += " urchin";
     var hue = cd.kind === "bomb" ? "#cfe6df" : HUE[cd.color];
-    // Urchin emblem: dark strokes UNDER white ones so the spikes read on any hue.
-    var emblem = cd.kind === "bomb" ? "" : cd.kind === "urchin"
-      ? '<g stroke="rgba(8,18,18,.85)" stroke-width="3.4" stroke-linecap="round">' +
-        '<path d="M12 1.5V7M12 17v5.5M1.5 12H7M17 12h5.5M4.2 4.2l3.6 3.6M16.2 16.2l3.6 3.6M19.8 4.2l-3.6 3.6M7.8 16.2l-3.6 3.6"/></g>' +
-        '<g stroke="rgba(255,255,255,.95)" stroke-width="1.5" stroke-linecap="round">' +
-        '<path d="M12 1.5V7M12 17v5.5M1.5 12H7M17 12h5.5M4.2 4.2l3.6 3.6M16.2 16.2l3.6 3.6M19.8 4.2l-3.6 3.6M7.8 16.2l-3.6 3.6"/></g>' +
-        '<circle cx="12" cy="12" r="5" fill="rgba(8,18,18,.7)"/>' +
-        '<circle cx="12" cy="12" r="3.4" fill="rgba(255,255,255,.9)"/>'
-      : EMBLEM[cd.color];
+    // Urchin shows its creature's own emblem; the spinning gold ring + pulse
+    // (CSS) are what mark it as special.
+    var emblem = cd.kind === "bomb" ? "" : EMBLEM[cd.color];
     return '<div class="' + kindClass + '" style="background:radial-gradient(circle at 34% 30%, ' +
       shade(hue, 1.35) + ', ' + hue + ' 62%); color:' + hue + '; box-shadow:0 2px 8px rgba(0,0,0,.35), 0 0 14px ' +
       hexA(hue, .38) + ';">' + (emblem ? '<svg viewBox="0 0 24 24">' + emblem + '</svg>' : '') + '</div>';
