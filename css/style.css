@@ -152,7 +152,7 @@ b{ font-variant-numeric:tabular-nums; }
 .blob{ position:relative; width:86%; height:86%; border-radius:46% 54% 50% 50%;
   display:flex; align-items:center; justify-content:center;
   transition:transform .16s var(--ease-buoy), box-shadow .2s ease, filter .2s ease; }
-.blob::before{ content:""; position:absolute; top:12%; left:18%; width:38%; height:30%;
+.blob::before{ content:""; position:absolute; top:13%; left:19%; width:27%; height:21%;
   border-radius:50%; background:rgba(255,255,255,.5); filter:blur(1px); }
 .blob svg{ position:relative; width:52%; height:52%; z-index:2; opacity:.92; }
 .tile.sel .blob{ transform:scale(1.06); box-shadow:0 0 0 3px var(--aqua), 0 0 18px 2px currentColor; filter:brightness(1.15); }
