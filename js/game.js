@@ -197,7 +197,7 @@
     if (keepSave) lsSet("tp-save", keepSave); // put the campaign save back untouched
     else lsDel("tp-save");
     updateHUD();
-    toast("Daily Challenge — reach " + m.star3 + " to claim +100 shells");
+    toast("Daily Challenge — reach the target to claim +100 shells");
   }
 
   function saveGame() {
@@ -522,11 +522,9 @@
   // --------------------------------------------- daily chest & challenge --
   function renderChallengeCard() {
     if (!ECON) return;
-    var depth = ECON.dailyChallengeDepth(TOTAL);
-    var m = metaFor(depth);
     var st = ECON.challengeState();
     var card = $("btn-challenge");
-    $("ch-desc").textContent = "Depth " + depth + " — reach " + m.star3;
+    $("ch-desc").textContent = "A mystery dive awaits";
     if (st.claimed) {
       card.classList.add("done");
       $("ch-reward").innerHTML = "✓ done";
@@ -545,7 +543,7 @@
     for (var i = 1; i <= 7; i++) {
       var pip = document.createElement("div");
       pip.className = "pip" + (i < info.dayIndex ? " past" : i === info.dayIndex ? " today" : "");
-      pip.innerHTML = "d" + i + "<b>" + info.rewards[i - 1] + "</b>";
+      pip.innerHTML = "Day " + i + "<b>" + info.rewards[i - 1] + "</b>";
       track.appendChild(pip);
     }
     $("chest").classList.remove("open");

@@ -254,9 +254,9 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .chest-panel{ text-align:center; }
 .chest-sub{ margin:0 0 var(--sp3); font-size:.85rem; color:var(--sub); }
 .chest-track{ display:flex; justify-content:center; gap:6px; margin-bottom:var(--sp3); }
-.chest-track .pip{ flex:0 0 34px; padding:5px 0 3px; border-radius:9px; background:rgba(255,255,255,.06);
-  box-shadow:inset 0 0 0 1px #2b4142; font-size:.6rem; color:var(--sub); font-weight:700;
-  display:flex; flex-direction:column; align-items:center; gap:1px; }
+.chest-track .pip{ flex:1 1 0; min-width:0; padding:5px 0 3px; border-radius:9px; background:rgba(255,255,255,.06);
+  box-shadow:inset 0 0 0 1px #2b4142; font-size:.55rem; color:var(--sub); font-weight:700;
+  display:flex; flex-direction:column; align-items:center; gap:1px; white-space:nowrap; }
 .chest-track .pip b{ font-size:.66rem; color:var(--text); }
 .chest-track .pip.past{ background:rgba(91,182,166,.14); box-shadow:inset 0 0 0 1px var(--aqua); }
 .chest-track .pip.today{ background:rgba(203,178,122,.16); box-shadow:inset 0 0 0 2px var(--gold), 0 0 12px rgba(203,178,122,.4); }
