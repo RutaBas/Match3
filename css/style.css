@@ -236,6 +236,54 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .reward-total{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.1rem; color:var(--gold); }
 .reward-detail{ font-size:.72rem; color:var(--sub); }
 
+/* ---- Daily Challenge card (home) ---- */
+.challenge-card{ display:flex; align-items:center; gap:10px; margin:10px auto 0; max-width:290px;
+  width:100%; border:0; cursor:pointer; text-align:left; padding:10px 14px; border-radius:14px;
+  background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
+  font-family:'Nunito Sans',sans-serif; transition:transform .15s var(--ease-buoy); }
+.challenge-card:active{ transform:scale(.97); }
+.challenge-card .ch-ic{ font-size:1.3rem; }
+.challenge-card .ch-txt{ flex:1; display:flex; flex-direction:column; line-height:1.25; }
+.challenge-card .ch-txt b{ font-family:'Quicksand',sans-serif; font-size:.86rem; }
+.challenge-card .ch-txt i{ font-style:normal; font-size:.72rem; color:var(--sub); }
+.challenge-card .ch-reward{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.8rem; color:var(--gold); }
+.challenge-card.done{ opacity:.65; }
+.challenge-card.done .ch-reward{ color:var(--aqua); }
+
+/* ---- Daily Dive chest modal ---- */
+.chest-panel{ text-align:center; }
+.chest-sub{ margin:0 0 var(--sp3); font-size:.85rem; color:var(--sub); }
+.chest-track{ display:flex; justify-content:center; gap:6px; margin-bottom:var(--sp3); }
+.chest-track .pip{ flex:0 0 34px; padding:5px 0 3px; border-radius:9px; background:rgba(255,255,255,.06);
+  box-shadow:inset 0 0 0 1px #2b4142; font-size:.6rem; color:var(--sub); font-weight:700;
+  display:flex; flex-direction:column; align-items:center; gap:1px; }
+.chest-track .pip b{ font-size:.66rem; color:var(--text); }
+.chest-track .pip.past{ background:rgba(91,182,166,.14); box-shadow:inset 0 0 0 1px var(--aqua); }
+.chest-track .pip.today{ background:rgba(203,178,122,.16); box-shadow:inset 0 0 0 2px var(--gold), 0 0 12px rgba(203,178,122,.4); }
+.chest-track .pip.today b{ color:var(--gold); }
+.chest-stage{ position:relative; height:130px; display:flex; align-items:center; justify-content:center; margin-bottom:var(--sp3); }
+.chest{ position:relative; width:96px; height:78px; animation:chestbob 2.2s ease-in-out infinite; }
+@keyframes chestbob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-5px);} }
+.chest-base{ position:absolute; left:0; right:0; bottom:0; height:48px; border-radius:8px 8px 12px 12px;
+  background:linear-gradient(180deg,#7a5a3a,#5d422b); box-shadow:inset 0 0 0 2px #caa25a, inset 0 -6px 10px rgba(0,0,0,.35); }
+.chest-base::after{ content:""; position:absolute; left:50%; top:-4px; transform:translateX(-50%);
+  width:16px; height:20px; border-radius:4px; background:#caa25a; box-shadow:0 0 8px rgba(203,178,122,.6); }
+.chest-lid{ position:absolute; left:0; right:0; top:6px; height:34px; border-radius:12px 12px 4px 4px;
+  background:linear-gradient(180deg,#8a6844,#6b4c30); box-shadow:inset 0 0 0 2px #caa25a;
+  transform-origin:50% 100%; transition:transform .5s cubic-bezier(.34,1.4,.5,1); z-index:2; }
+.chest.open .chest-lid{ transform:rotateX(0deg) rotate(-24deg) translate(-8px,-26px); }
+.chest.open{ animation:none; }
+.chest-glow{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:20px; height:14px;
+  border-radius:50%; background:var(--gold); filter:blur(10px); opacity:0; transition:opacity .4s ease .15s; }
+.chest.open .chest-glow{ opacity:.95; width:70px; height:40px; }
+.chest-burst{ position:absolute; inset:0; pointer-events:none; }
+.chest-burst .shellp{ position:absolute; left:50%; top:52%; font-size:1rem; opacity:0;
+  animation:shellpop 1s cubic-bezier(.2,.7,.4,1) forwards; }
+@keyframes shellpop{ 0%{ transform:translate(-50%,-50%) scale(.3); opacity:0; }
+  15%{ opacity:1; } 100%{ transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot)); opacity:0; } }
+.chest-amount{ position:absolute; left:0; right:0; bottom:-4px; font-family:'Quicksand',sans-serif;
+  font-weight:700; font-size:1.25rem; color:var(--gold); animation:fadein .4s ease both .3s; }
+
 .rescue-sub{ margin:0 0 var(--sp2); font-size:.9rem; color:var(--sub); }
 .rescue-need{ text-align:center; font-family:'Quicksand',sans-serif; font-weight:700;
   color:var(--aqua); margin-bottom:var(--sp3); }

@@ -85,8 +85,13 @@ Sounds synthesized with Web Audio (no asset files). `design-sound.html` offers 2
 ## Phase 2 (shipped later) — Shell economy & boosters
 One currency, **Shells 🐚**, no inventory (buy-at-use). Levels remain solver-certified
 winnable **without** any booster — boosters only ever help.
-- **Earning:** win = 20/30/40 by tier + 10/star · first win each day ("Daily Dive") +50 ·
-  star milestones (10/25/50/100…★) +100 · new players start with 150.
+- **Earning:** win = 20/30/40 by tier + 10/star · star milestones (10/25/50/100…★) +100 ·
+  new players start with 150 · **Daily Dive chest** (visible login reward, replaced the old
+  invisible first-win bonus): opens on first visit each day, 7-day escalating track
+  20→30→45→60→80→100→150🐚 with pips; a missed day resets to day 1, day 7 completes the
+  cycle · **Daily Challenge**: one date-derived featured Depth per day (same for all
+  players) — reach its 3★ score (proven reachable) for +100🐚, once/day, campaign progress
+  and streak untouched.
 - **Boosters:** **Crab Claw** 60🐚 (pop any one creature — runs through the real engine, a
   clawed special fires; no move consumed) · **Rip Current** 40🐚 (reshuffle to a match-free
   layout with a legal move; refunds itself if impossible) · **Second Wind** 100🐚 (at

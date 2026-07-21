@@ -101,6 +101,7 @@
   function startDepth(depth) {
     var m = metaFor(depth);
     if (!m) return;
+    G.challenge = false;
     G.depth = depth; G.meta = m;
     G.board = { rows: m.board.rows, cols: m.board.cols, grid: cloneGrid(m.board.grid) };
     G.refill = m.refill;
@@ -183,8 +184,24 @@
     return true;
   }
 
+  // Daily Challenge session: the featured depth played at its 3-STAR score as
+  // the target. Campaign progress, streak and the campaign save are untouched;
+  // challenge sessions are never persisted (abandoning one costs nothing).
+  function startChallenge(depth) {
+    var m = metaFor(depth);
+    if (!m) return;
+    var keepSave = lsGet("tp-save", null);   // an in-progress CAMPAIGN level, if any
+    startDepth(depth);                        // builds the session (and writes tp-save)
+    G.challenge = true;
+    G.target = m.star3;                       // the challenge bar (proven reachable)
+    if (keepSave) lsSet("tp-save", keepSave); // put the campaign save back untouched
+    else lsDel("tp-save");
+    updateHUD();
+    toast("Daily Challenge — reach " + m.star3 + " to claim +100 shells");
+  }
+
   function saveGame() {
-    if (G.over || !G.board) return;
+    if (G.over || !G.board || G.challenge) return;
     lsSet("tp-save", {
       depth: G.depth,
       sig: levelSig(G.meta),
@@ -502,6 +519,71 @@
     saveGame();
   }
 
+  // --------------------------------------------- daily chest & challenge --
+  function renderChallengeCard() {
+    if (!ECON) return;
+    var depth = ECON.dailyChallengeDepth(TOTAL);
+    var m = metaFor(depth);
+    var st = ECON.challengeState();
+    var card = $("btn-challenge");
+    $("ch-desc").textContent = "Depth " + depth + " — reach " + m.star3;
+    if (st.claimed) {
+      card.classList.add("done");
+      $("ch-reward").innerHTML = "✓ done";
+    } else {
+      card.classList.remove("done");
+      $("ch-reward").innerHTML = "+" + st.reward + "&#128026;";
+    }
+  }
+
+  function maybeShowChest() {
+    if (!ECON) return;
+    var info = ECON.checkDailyLogin();
+    if (!info.show || !$("chest-modal").hidden) return;
+    // build the 7-day track: earlier days in this cycle lit, today highlighted
+    var track = $("chest-track"); track.innerHTML = "";
+    for (var i = 1; i <= 7; i++) {
+      var pip = document.createElement("div");
+      pip.className = "pip" + (i < info.dayIndex ? " past" : i === info.dayIndex ? " today" : "");
+      pip.innerHTML = "d" + i + "<b>" + info.rewards[i - 1] + "</b>";
+      track.appendChild(pip);
+    }
+    $("chest").classList.remove("open");
+    $("chest-amount").hidden = true;
+    $("chest-open").hidden = false;
+    $("chest-done").hidden = true;
+    $("chest-burst").innerHTML = "";
+    $("chest-modal").hidden = false;
+  }
+
+  function openChest() {
+    var rw = ECON.claimLoginChest();
+    if (!rw) { $("chest-modal").hidden = true; return; }
+    $("chest").classList.add("open");
+    $("chest-open").hidden = true;
+    SND.special(); buzz([10, 30, 14]);
+    // shells burst out of the chest
+    var burst = $("chest-burst");
+    for (var i = 0; i < 10; i++) {
+      var s = document.createElement("span");
+      s.className = "shellp"; s.textContent = "🐚";
+      var ang = (-90 + (Math.random() * 120 - 60)) * Math.PI / 180;
+      var dist = 40 + Math.random() * 55;
+      s.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+      s.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+      s.style.setProperty("--rot", (Math.random() * 90 - 45) + "deg");
+      s.style.animationDelay = (Math.random() * 0.25) + "s";
+      burst.appendChild(s);
+    }
+    setTimeout(function () {
+      $("chest-shells").textContent = rw.amount;
+      $("chest-amount").hidden = false;
+      $("chest-done").hidden = false;
+      SND.win();
+      if (ECON) $("stat-shells").textContent = ECON.balance();
+    }, 550);
+  }
+
   // ------------------------------------------------- Phase 2: boosters --
   // Second Wind: out of moves below target — offer +5 moves for shells
   // instead of an immediate wash-out.
@@ -785,6 +867,7 @@
   function win() {
     G.over = true;
     clearSelected();
+    if (G.challenge) { winChallenge(); return; }
     var earned = starsFor(G.score);
     var prev = progress.stars[G.depth] || 0;
     if (earned > prev) progress.stars[G.depth] = earned;
@@ -794,6 +877,11 @@
     saveProgress();
     lsDel("tp-save");
 
+    // restore the standard texts FIRST (a challenge win rewrites them, and the
+    // win-depth2 element must exist before we address it by id)
+    document.querySelector("#screen-win .win-h").textContent = "Surfaced!";
+    document.querySelector("#screen-win .win-sub").innerHTML =
+      'Depth <b id="win-depth2">' + G.depth + "</b> cleared";
     $("win-depth").textContent = G.depth;
     $("win-depth2").textContent = G.depth;
     var stars = $("win-stars"); stars.innerHTML = "";
@@ -820,6 +908,38 @@
     // hide Next Depth on the final depth
     $("btn-win-next").style.display = (G.depth >= TOTAL) ? "none" : "";
 
+    SND.win(); buzz([12, 40, 20, 40, 12]);
+    show("win");
+    countUp($("win-score"), G.score, 900);
+    celebrate();
+  }
+
+  // Challenge win: campaign progress/streak/save untouched; the +100 reward is
+  // claimable once per day (replays after claiming are just for glory).
+  function winChallenge() {
+    $("win-depth").textContent = G.depth;
+    $("win-depth2").textContent = G.depth;
+    var stars = $("win-stars"); stars.innerHTML = "";
+    for (var i = 1; i <= 3; i++) {
+      var sp = document.createElement("span");
+      sp.className = "on"; sp.style.animationDelay = (i * 0.14) + "s";
+      sp.innerHTML = "&#9733;"; stars.appendChild(sp);
+    }
+    $("win-moves").textContent = G.movesUsed + "/" + G.moves;
+    $("win-streak").textContent = "✓";
+    document.querySelector("#screen-win .win-h").textContent = "Challenge complete!";
+    // keep id="win-depth2" alive — the campaign win() writes to it by id
+    document.querySelector("#screen-win .win-sub").innerHTML =
+      'Daily Challenge &mdash; Depth <b id="win-depth2">' + G.depth + "</b> mastered";
+    var rw = ECON ? ECON.claimChallenge() : null;
+    if (rw) {
+      $("reward-total").textContent = rw.amount;
+      $("reward-detail").textContent = "Daily Challenge reward";
+      $("win-reward").hidden = false;
+    } else {
+      $("win-reward").hidden = true;   // already claimed today
+    }
+    $("btn-win-next").style.display = "none";
     SND.win(); buzz([12, 40, 20, 40, 12]);
     show("win");
     countUp($("win-score"), G.score, 900);
@@ -865,8 +985,10 @@
   function lose() {
     G.over = true;
     clearSelected();
-    progress.streak = 0; saveProgress();
-    lsDel("tp-save");
+    if (!G.challenge) {                      // a lost challenge costs nothing
+      progress.streak = 0; saveProgress();
+      lsDel("tp-save");
+    }
     $("lose-depth").textContent = G.depth;
     $("lose-score").textContent = G.score;
     var pct = Math.round(G.score / G.target * 100);
@@ -908,6 +1030,8 @@
     $("stat-depth").textContent = highestUnlocked();
     $("stat-streak").textContent = progress.streak || 0;
     if (ECON) $("stat-shells").textContent = ECON.balance();
+    renderChallengeCard();
+    maybeShowChest();
 
     var cur = currentDepth();
     var sv = lsGet("tp-save", null);
@@ -1117,6 +1241,17 @@
       $("rescue").hidden = true;
       lose();
     });
+
+    // daily chest + challenge
+    $("chest-open").addEventListener("click", openChest);
+    $("chest-done").addEventListener("click", function () { $("chest-modal").hidden = true; renderChallengeCard(); });
+    $("btn-challenge").addEventListener("click", function () {
+      SND.resume();
+      var st = ECON.challengeState();
+      var depth = ECON.dailyChallengeDepth(TOTAL);
+      if (st.claimed) { toast("Challenge already mastered today — new one tomorrow"); return; }
+      startChallenge(depth);
+    });
     $("btn-mute").addEventListener("click", function () {
       SND.toggle(); updateHUD(); if (!SND.isMuted()) SND.select();
     });
@@ -1131,7 +1266,9 @@
 
     // lose
     $("btn-lose-map").addEventListener("click", function () { show("home"); });
-    $("btn-lose-retry").addEventListener("click", function () { startDepth(G.depth); });
+    $("btn-lose-retry").addEventListener("click", function () {
+      if (G.challenge) startChallenge(G.depth); else startDepth(G.depth);
+    });
 
     // how to play — opened on demand from the home button (never auto-shown)
     $("btn-howto").addEventListener("click", function () { $("howto").hidden = false; });

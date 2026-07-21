@@ -45,6 +45,11 @@
           <span>&#128026; <b id="stat-shells">0</b></span>
         </div>
         <button class="play" id="btn-continue">Continue</button>
+        <button class="challenge-card" id="btn-challenge">
+          <span class="ch-ic">&#127919;</span>
+          <span class="ch-txt"><b>Daily Challenge</b><i id="ch-desc">Depth ? &mdash; reach ?</i></span>
+          <span class="ch-reward" id="ch-reward">+100&#128026;</span>
+        </button>
         <button class="howto-link" id="btn-howto">How to play</button>
       </div>
       <div class="trail" id="trail">
@@ -140,6 +145,26 @@
     <div class="thinking-text">reading the current&hellip;</div>
   </div>
 
+  <!-- ===================== DAILY DIVE CHEST ===================== -->
+  <div id="chest-modal" class="modal" hidden>
+    <div class="panel chest-panel">
+      <b>Daily Dive</b>
+      <p class="chest-sub">Dive in every day &mdash; the chest grows richer for 7 straight days.</p>
+      <div class="chest-track" id="chest-track"></div>
+      <div class="chest-stage">
+        <div class="chest" id="chest">
+          <div class="chest-lid"></div>
+          <div class="chest-base"></div>
+          <div class="chest-glow"></div>
+        </div>
+        <div class="chest-burst" id="chest-burst" aria-hidden="true"></div>
+        <div class="chest-amount" id="chest-amount" hidden>+<b id="chest-shells">0</b> &#128026;</div>
+      </div>
+      <button id="chest-open" class="btn primary wide">Open the chest</button>
+      <button id="chest-done" class="btn primary wide" hidden>Collect</button>
+    </div>
+  </div>
+
   <!-- ===================== SECOND WIND (out-of-moves rescue) ============ -->
   <div id="rescue" class="modal" hidden>
     <div class="panel">
@@ -181,7 +206,8 @@
       <b class="how-h">Earning shells &#128026;</b>
       <ul class="how">
         <li><span>&#127942;</span> Win a Depth: <b>20&ndash;40&#128026;</b> (deeper pays more) <b>+10&#128026; per star</b>.</li>
-        <li><span>&#127749;</span> <b>Daily Dive</b>: your first win each day pays a <b>+50&#128026;</b> bonus.</li>
+        <li><span>&#127873;</span> <b>Daily Dive chest</b>: opens on your first visit each day. Rewards climb for 7 straight days (20 &rarr; 150&#128026;), then the cycle restarts. Miss a day and the tide washes you back to day 1.</li>
+        <li><span>&#127919;</span> <b>Daily Challenge</b>: one featured Depth a day (same for everyone) &mdash; reach its <b>3-star score</b> for <b>+100&#128026;</b>. Retry as often as you like; your campaign progress is untouched.</li>
         <li><span>&#11088;</span> <b>Star milestones</b>: reaching 10, 25, 50, 100&hellip; total stars pays <b>+100&#128026;</b> each. Replaying old Depths for 3 stars counts!</li>
         <li><span>&#128293;</span> <b>Tide's Favor</b> (free): win streaks start your next dive with gift specials &mdash; 1 win &rarr; a current, 2 &rarr; two currents, 3+ &rarr; two currents <em>and</em> a pearl. A loss resets it.</li>
       </ul>
