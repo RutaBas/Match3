@@ -31,10 +31,25 @@ make "prove this level is winnable" meaningless.)
 3. **Specials (the CC feel, and the hard-tier technique):**
    - A run of **4** creates a **striped** candy. Clearing/activating it wipes its full
      **row or column**.
-   - A run of **5 in a line** creates a **color bomb**. Activating it (swap against a normal
-     candy) clears **every candy of that color**.
+   - An **L- or T-shaped** match (an H-run ≥3 and a V-run ≥3 of one color sharing a cell,
+     ≥5 distinct cells) creates an **urchin** at the intersection. Firing it blasts the
+     **3×3** block around it. (Phase 3)
+   - A run of **5 in a line** creates a **color bomb** ("pearl"). Activating it (swap against
+     a normal candy) clears **every candy of that color**.
+   - Creation priority when overlaps compete: straight-5 pearl > urchin (L/T) > stripe.
    Specials are created at the swap cell and fire when matched or swapped. They are part of
    the real rules AND the grading ladder.
+3b. **Special+special swap combos (Phase 3).** Swapping two adjacent specials is always
+   legal (an activation; no match needed):
+   - **stripe+stripe** → full row AND column through the swap cell (a cross);
+   - **stripe+urchin** → 3 rows + 3 columns centered on the swap cell;
+   - **urchin+urchin** → a 5×5 blast at the swap cell;
+   - **pearl+stripe** → every candy of the stripe's color becomes a stripe (orientation
+     alternating deterministically by (r+c)%2) and all fire;
+   - **pearl+urchin** → every candy of the urchin's color fires a 3×3 blast at its cell;
+   - **pearl+pearl** → clears the whole board.
+   Specials caught in any cleared union fire and chain. Stripe/urchin swapped with a
+   NORMAL candy remain match-required.
 4. **Gravity:** after clears, candies fall down within their column to fill gaps.
 5. **Refill:** empty cells at the top of each column fill from that column's fixed queue.
 6. **Cascade:** falls/refills that form new matches auto-resolve, chaining. Each chained

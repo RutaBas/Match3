@@ -94,6 +94,16 @@ winnable **without** any booster — boosters only ever help.
 - **Tide's Favor** (free, automatic): win streak pre-places specials at level start —
   1 win → a current; 2 → two currents; 3+ → two currents + a pearl. Resets on a loss.
 
+## Phase 3 (shipped later) — Urchins & special combos
+- **Urchin** (new special): match 5 in an **L or T shape** → an urchin at the intersection;
+  fires a **3×3 blast**; spiky pulsing-glow visual in the creature's own color.
+- **Combo swaps** (two adjacent specials, always legal): current+current = full cross ·
+  current+urchin = 3 rows + 3 cols · urchin+urchin = 5×5 blast · pearl+current = that color
+  converts to currents and fires · pearl+urchin = that color explodes · pearl+pearl = board.
+- Creation priority: straight-5 pearl > urchin > current. All deterministic; verified by an
+  independently recomputed harness (18/18) and the full 100-Depth campaign re-certified
+  winnable at its shipped targets under the richer rules (100/100).
+
 ## Stage 8 — App-store-level extras
 Manifest: real **pearl/tide app icon**, theme color `#17292A`, splash to match. iOS meta tags +
 safe-area insets (notch/home-bar). Block pull-to-refresh & text-selection on the board. Offline

@@ -218,8 +218,13 @@
     if (cd.kind === "stripe-h") kindClass += " stripe-h";
     else if (cd.kind === "stripe-v") kindClass += " stripe-v";
     else if (cd.kind === "bomb") kindClass += " bomb";
+    else if (cd.kind === "urchin") kindClass += " urchin";
     var hue = cd.kind === "bomb" ? "#cfe6df" : HUE[cd.color];
-    var emblem = cd.kind === "bomb" ? "" : EMBLEM[cd.color];
+    var emblem = cd.kind === "bomb" ? "" : cd.kind === "urchin"
+      ? '<g stroke="rgba(255,255,255,.75)" stroke-width="1.6" stroke-linecap="round">' +
+        '<path d="M12 2.5V7M12 17v4.5M2.5 12H7M17 12h4.5M4.9 4.9l3.2 3.2M15.9 15.9l3.2 3.2M19.1 4.9l-3.2 3.2M8.1 15.9l-3.2 3.2"/></g>' +
+        '<circle cx="12" cy="12" r="4.6" fill="rgba(255,255,255,.55)"/>'
+      : EMBLEM[cd.color];
     return '<div class="' + kindClass + '" style="background:radial-gradient(circle at 34% 30%, ' +
       shade(hue, 1.35) + ', ' + hue + ' 62%); color:' + hue + '; box-shadow:0 2px 8px rgba(0,0,0,.35), 0 0 14px ' +
       hexA(hue, .38) + ';">' + (emblem ? '<svg viewBox="0 0 24 24">' + emblem + '</svg>' : '') + '</div>';

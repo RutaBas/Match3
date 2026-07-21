@@ -13,10 +13,11 @@
  *
  * BOARD MODEL
  *   board = { rows, cols, grid } where grid[r][c] is a candy or null.
- *   candy = { color:int>=1, kind:'normal'|'stripe-h'|'stripe-v'|'bomb' }.
- *     - color bomb ('bomb') is a WILDCARD: it carries color 0 and never takes
- *       part in a color run; it only fires when swapped (activation).
- *     - a striped candy keeps a real color and DOES take part in color runs.
+ *   candy = { color:int>=1, kind:'normal'|'stripe-h'|'stripe-v'|'urchin'|'bomb' }.
+ *     - color bomb ('bomb', the "pearl") is a WILDCARD: it carries color 0 and
+ *       never takes part in a color run; it only fires when swapped (activation).
+ *     - striped candies AND urchins keep a real color and DO take part in
+ *       color runs.
  *   refill = array (length cols); refill[c] is that column's fixed queue of
  *     upcoming color ints. A per-column pointer array tracks the next draw.
  *
@@ -33,12 +34,23 @@
  *   - run of exactly 4  -> a STRIPED candy is created at the swap cell (or the
  *     run midpoint during a cascade). Horizontal run -> 'stripe-h' (clears its
  *     ROW when fired); vertical run -> 'stripe-v' (clears its COLUMN).
- *   - run of >=5        -> a COLOR BOMB is created at the swap/mid cell.
- *   - a striped candy caught in a match FIRES (clears its whole row/column);
- *     firing chains (a fired stripe can clear other stripes). A color bomb only
- *     fires via SWAP activation (see applyMove); a bomb merely caught in a
+ *   - L/T shape (an h-run >=3 and a v-run >=3, same color, sharing a cell,
+ *     >=5 distinct cells total) -> an URCHIN is created at the shared cell (or
+ *     a swap cell on the union). Fires a 3x3 blast centered on itself.
+ *   - run of >=5 in a straight line -> a COLOR BOMB is created at the swap/mid
+ *     cell. Creation priority per color-group when overlapping runs compete:
+ *     straight-5 pearl > urchin (L/T) > stripe; a run consumed by an urchin
+ *     creation cannot also mint a stripe (see computeCreations).
+ *   - a striped candy or urchin caught in a clear FIRES (row/column, or 3x3);
+ *     firing chains (a fired special can set off other specials). A color bomb
+ *     only fires via SWAP activation (see applyMove); a bomb merely caught in a
  *     cascade clear is removed without its all-color effect (keeps the cascade
  *     unambiguous — a bomb has no color to key on outside a swap).
+ *   - SPECIAL+SPECIAL swaps are ACTIVATIONS: always legal, no match required
+ *     (stripe/urchin swapped with a NORMAL candy stays match-required). The
+ *     effect resolves as a forced initial clear, then normal cascading; the two
+ *     swapped specials are CONSUMED (cleared + scored, but they do not re-fire
+ *     their own single effect). See comboClear for the exact cell unions.
  *
  * SCORING
  *   BASE_SCORE (60) points per cleared candy, times a combo multiplier that
@@ -105,12 +117,13 @@
 
   // Single-char-per-cell encoding (colors 1..6):
   //   '.' empty  |  '1'..'6' normal  |  'a'..'f' stripe-h  |
-  //   'A'..'F' stripe-v  |  '*' bomb.
+  //   'A'..'F' stripe-v  |  'g'..'l' urchin  |  '*' bomb.
   function cellChar(cd) {
     if (cd === null) return ".";
     if (cd.kind === "bomb") return "*";
-    if (cd.kind === "stripe-h") return String.fromCharCode(96 + cd.color); // a..
-    if (cd.kind === "stripe-v") return String.fromCharCode(64 + cd.color); // A..
+    if (cd.kind === "stripe-h") return String.fromCharCode(96 + cd.color);  // a..
+    if (cd.kind === "stripe-v") return String.fromCharCode(64 + cd.color);  // A..
+    if (cd.kind === "urchin") return String.fromCharCode(102 + cd.color);   // g..
     return String(cd.color);
   }
   function serialize(board) {
@@ -243,38 +256,104 @@
 
   function key(r, c) { return r + "," + c; }
 
-  // Which >=4 runs mint a special, and where. swapCells (or null) biases the
-  // creation cell onto the player's swap cell when it lies on the run.
+  // Which runs mint a special, and where. swapCells (or null) biases the
+  // creation cell onto the player's swap cell when it lies on the run (for an
+  // urchin: on the UNION of its two runs).
+  //
+  // Creation priority per color-group when overlapping runs compete — three
+  // deterministic passes:
+  //   1. straight runs of >=5 -> color bomb ("pearl"), longest first;
+  //   2. L/T intersections among runs not consumed by pass 1 (an h-run >=3 and
+  //      a v-run >=3, same color, sharing a cell, >=5 distinct cells total) ->
+  //      URCHIN at the shared cell (swap-cell bias over the union). BOTH runs
+  //      are consumed: a run consumed by an urchin cannot also mint a stripe;
+  //   3. remaining runs of exactly 4 -> stripe (h -> stripe-h, v -> stripe-v).
   function computeCreations(runs, swapCells) {
-    var sorted = runs.slice().sort(function (a, b) { return b.len - a.len; });
-    var creations = [], used = {};
-    for (var i = 0; i < sorted.length; i++) {
-      var run = sorted[i];
-      if (run.len < 4) continue;
-      var cell = null, j;
+    var creations = [], usedCell = {}, consumed = new Array(runs.length);
+    var i, j;
+
+    function onCells(cells, r, c) {
+      for (var t = 0; t < cells.length; t++) {
+        if (cells[t].r === r && cells[t].c === c) return true;
+      }
+      return false;
+    }
+    // Swap-cell bias: the earliest swap cell lying on `cells`, else `fallback`.
+    function pickCell(cells, fallback) {
       if (swapCells) {
-        for (j = 0; j < swapCells.length; j++) {
-          var sc = swapCells[j];
-          for (var k = 0; k < run.cells.length; k++) {
-            if (run.cells[k].r === sc.r && run.cells[k].c === sc.c) { cell = sc; break; }
+        for (var s = 0; s < swapCells.length; s++) {
+          if (onCells(cells, swapCells[s].r, swapCells[s].c)) {
+            return { r: swapCells[s].r, c: swapCells[s].c };
           }
-          if (cell) break;
         }
       }
-      if (!cell) cell = run.cells[Math.floor((run.len - 1) / 2)];
-      if (used[key(cell.r, cell.c)]) continue;
-      used[key(cell.r, cell.c)] = 1;
-      var kind = run.len >= 5 ? "bomb" : (run.dir === "h" ? "stripe-h" : "stripe-v");
-      var color = run.len >= 5 ? 0 : run.color;
-      creations.push({ r: cell.r, c: cell.c, kind: kind, color: color });
+      return fallback;
     }
+    function midCell(run) {
+      return run.cells[Math.floor((run.len - 1) / 2)];
+    }
+
+    // Deterministic order: length desc, findRuns order (h then v, scan order)
+    // as the tiebreak — matches the old stable sort behavior.
+    var order = [];
+    for (i = 0; i < runs.length; i++) order.push(i);
+    order.sort(function (a, b) { return runs[b].len - runs[a].len || a - b; });
+
+    // pass 1: pearls (straight >=5)
+    for (i = 0; i < order.length; i++) {
+      var brun = runs[order[i]];
+      if (brun.len < 5) continue;
+      var bcell = pickCell(brun.cells, midCell(brun));
+      if (usedCell[key(bcell.r, bcell.c)]) continue;
+      usedCell[key(bcell.r, bcell.c)] = 1;
+      consumed[order[i]] = 1;
+      creations.push({ r: bcell.r, c: bcell.c, kind: "bomb", color: 0 });
+    }
+
+    // pass 2: urchins (L/T). Scan h-runs in findRuns order; pair each with the
+    // first unconsumed same-color v-run sharing a cell. (An h-run and a v-run
+    // can share at most one cell: (h.row, v.col).)
+    for (i = 0; i < runs.length; i++) {
+      if (consumed[i] || runs[i].dir !== "h") continue;
+      for (j = 0; j < runs.length; j++) {
+        if (consumed[j] || runs[j].dir !== "v" || runs[j].color !== runs[i].color) continue;
+        var hr = runs[i], vr = runs[j];
+        var ir = hr.cells[0].r, ic = vr.cells[0].c; // the only possible shared cell
+        if (!onCells(hr.cells, ir, ic) || !onCells(vr.cells, ir, ic)) continue;
+        if (hr.len + vr.len - 1 < 5) continue; // >=5 distinct cells (always true for >=3 runs)
+        var ucell = pickCell(hr.cells.concat(vr.cells), { r: ir, c: ic });
+        if (usedCell[key(ucell.r, ucell.c)]) continue;
+        usedCell[key(ucell.r, ucell.c)] = 1;
+        consumed[i] = 1;
+        consumed[j] = 1;
+        creations.push({ r: ucell.r, c: ucell.c, kind: "urchin", color: hr.color });
+        break;
+      }
+    }
+
+    // pass 3: stripes (exactly 4, not consumed above)
+    for (i = 0; i < order.length; i++) {
+      var idx = order[i], srun = runs[idx];
+      if (consumed[idx] || srun.len !== 4) continue;
+      var scell = pickCell(srun.cells, midCell(srun));
+      if (usedCell[key(scell.r, scell.c)]) continue;
+      usedCell[key(scell.r, scell.c)] = 1;
+      consumed[idx] = 1;
+      creations.push({ r: scell.r, c: scell.c,
+        kind: srun.dir === "h" ? "stripe-h" : "stripe-v", color: srun.color });
+    }
+
     return creations;
   }
 
   // Expand a clear set by firing existing specials it contains. A stripe-h
-  // clears its row, stripe-v its column; a bomb caught here just clears.
+  // clears its row, stripe-v its column, an urchin the 3x3 block centered on
+  // it; firing chains. A bomb caught here just clears (it only fires via swap
+  // activation). `suppress` (optional {"r,c":1} map) lists cells whose special
+  // was CONSUMED by an activation combo: it clears with the set but does NOT
+  // additionally fire its own single effect.
   // Returns { cells:[{r,c}...], firedAny }.
-  function expandFires(board, clearCells) {
+  function expandFires(board, clearCells, suppress) {
     var inSet = {}, queue = [], out = [];
     var i, c;
     for (i = 0; i < clearCells.length; i++) {
@@ -287,7 +366,7 @@
       var cell = queue[head++];
       out.push(cell);
       var cd = board.grid[cell.r][cell.c];
-      if (isSpecial(cd)) {
+      if (isSpecial(cd) && !(suppress && suppress[key(cell.r, cell.c)])) {
         firedAny = true;
         var add = [];
         if (cd.kind === "stripe-h") {
@@ -297,6 +376,15 @@
         } else if (cd.kind === "stripe-v") {
           for (var rr = 0; rr < board.rows; rr++) {
             if (board.grid[rr][cell.c] !== null) add.push({ r: rr, c: cell.c });
+          }
+        } else if (cd.kind === "urchin") {
+          for (var dr = -1; dr <= 1; dr++) {
+            for (var dc = -1; dc <= 1; dc++) {
+              var ur = cell.r + dr, uc = cell.c + dc;
+              if (inBounds(board, ur, uc) && board.grid[ur][uc] !== null) {
+                add.push({ r: ur, c: uc });
+              }
+            }
           }
         }
         // bomb: no extra clears here (only fires via swap activation).
@@ -311,7 +399,8 @@
 
   // The cascade loop. `initial` is either
   //   { type:'match', swapCells:[{r,c},{r,c}] }  (normal swap; find the match), or
-  //   { type:'clear', cells:[{r,c}...] }         (bomb activation; forced clears).
+  //   { type:'clear', cells:[{r,c}...], suppress? } (activation swap; forced
+  //     clears — suppress marks consumed specials that must not re-fire).
   // Returns { board, pointers, scoreGained, cascades, specialCreated, specialFired }.
   var MAX_CASCADES = 200;
 
@@ -349,7 +438,8 @@
         creations = computeCreations(runs, first ? initial.swapCells : null);
       }
 
-      var exp = expandFires(b, clearCells);
+      var exp = expandFires(b, clearCells,
+        (first && initial.type === "clear") ? initial.suppress : null);
       if (exp.firedAny) specialFired = true;
       clearCells = exp.cells;
 
@@ -400,10 +490,122 @@
     };
   }
 
+  // ---------------------------------------------------- activation combos --
+
+  // Build the initial forced-clear set for an ACTIVATION swap — a swap that is
+  // always legal, no match required: any swap involving a color bomb, or a
+  // swap of TWO specials. Returns { cells:[{r,c}...], suppress:{"r,c":1} } or
+  // null when the swap is NOT an activation (normal+normal, or a stripe/urchin
+  // paired with a normal candy — those stay match-required).
+  //
+  // `suppress` lists CONSUMED specials: they are cleared and scored with the
+  // union but do not additionally fire their own single effect in expandFires
+  // (the combo's stated union IS their effect). Any OTHER special caught
+  // inside the union still fires and chains normally via expandFires.
+  //
+  // Pair effects are centered on the swap DESTINATION cell d = (move.r2,
+  // move.c2). Cell unions (clipped to the board, deterministic, no RNG):
+  //   stripe+stripe  -> full row d.r + full column d.c (a cross).
+  //   stripe+urchin  -> 3 rows (d.r-1..d.r+1) + 3 columns (d.c-1..d.c+1).
+  //   urchin+urchin  -> the 5x5 block centered on d.
+  //   bomb+stripe    -> every candy of the stripe's color becomes a stripe
+  //                     ((r+c)%2===0 -> fires its ROW, else its COLUMN) and
+  //                     ALL of them fire; bomb + originals consumed.
+  //   bomb+urchin    -> every candy of the urchin's color fires a 3x3 blast
+  //                     at its own location; bomb + originals consumed.
+  //   bomb+normal    -> every candy of the partner's color clears (specials of
+  //                     that color caught in the set fire via expandFires).
+  //   bomb+bomb      -> the whole board.
+  function comboClear(board, a, d, A, B) {
+    var cells = [], have = {}, suppress = {};
+    function add(r, c) {
+      if (board.grid[r][c] === null) return;
+      var kk = key(r, c);
+      if (!have[kk]) { have[kk] = 1; cells.push({ r: r, c: c }); }
+    }
+    function addRow(r) {
+      if (r < 0 || r >= board.rows) return;
+      for (var c = 0; c < board.cols; c++) add(r, c);
+    }
+    function addCol(c) {
+      if (c < 0 || c >= board.cols) return;
+      for (var r = 0; r < board.rows; r++) add(r, c);
+    }
+    function addBlock(cr, cc, radius) {
+      for (var r = cr - radius; r <= cr + radius; r++) {
+        for (var c = cc - radius; c <= cc + radius; c++) {
+          if (inBounds(board, r, c)) add(r, c);
+        }
+      }
+    }
+    var r, c, cd;
+
+    if (A.kind === "bomb" || B.kind === "bomb") {
+      var bombCell = A.kind === "bomb" ? a : d;
+      var other = A.kind === "bomb" ? B : A;
+      if (other.kind === "bomb") {
+        // bomb + bomb: the whole board.
+        for (r = 0; r < board.rows; r++) for (c = 0; c < board.cols; c++) add(r, c);
+        return { cells: cells, suppress: suppress };
+      }
+      if (other.kind === "stripe-h" || other.kind === "stripe-v" || other.kind === "urchin") {
+        // bomb + stripe / bomb + urchin: convert-and-fire every candy of the
+        // partner's color; consume the bomb and all originals.
+        var asUrchin = other.kind === "urchin";
+        for (r = 0; r < board.rows; r++) {
+          for (c = 0; c < board.cols; c++) {
+            cd = board.grid[r][c];
+            if (cd === null || cd.kind === "bomb" || cd.color !== other.color) continue;
+            suppress[key(r, c)] = 1; // an original: converted & consumed
+            add(r, c);
+            if (asUrchin) addBlock(r, c, 1);
+            else if ((r + c) % 2 === 0) addRow(r);
+            else addCol(c);
+          }
+        }
+        suppress[key(bombCell.r, bombCell.c)] = 1;
+        add(bombCell.r, bombCell.c);
+        return { cells: cells, suppress: suppress };
+      }
+      // bomb + normal: every candy of the partner's color + the bomb itself.
+      for (r = 0; r < board.rows; r++) {
+        for (c = 0; c < board.cols; c++) {
+          cd = board.grid[r][c];
+          if (cd !== null && cd.kind !== "bomb" && cd.color === other.color) add(r, c);
+        }
+      }
+      add(a.r, a.c);
+      add(d.r, d.c);
+      return { cells: cells, suppress: suppress };
+    }
+
+    if (isSpecial(A) && isSpecial(B)) {
+      // stripe/urchin pair, centered on the destination cell d. Both consumed.
+      var urchins = (A.kind === "urchin" ? 1 : 0) + (B.kind === "urchin" ? 1 : 0);
+      suppress[key(a.r, a.c)] = 1;
+      suppress[key(d.r, d.c)] = 1;
+      add(a.r, a.c);
+      add(d.r, d.c);
+      if (urchins === 0) {          // stripe + stripe: cross
+        addRow(d.r);
+        addCol(d.c);
+      } else if (urchins === 1) {   // stripe + urchin: 3 rows + 3 columns
+        addRow(d.r - 1); addRow(d.r); addRow(d.r + 1);
+        addCol(d.c - 1); addCol(d.c); addCol(d.c + 1);
+      } else {                      // urchin + urchin: 5x5 blast
+        addBlock(d.r, d.c, 2);
+      }
+      return { cells: cells, suppress: suppress };
+    }
+
+    return null; // match-required swap (normal+normal or special+normal)
+  }
+
   // ------------------------------------------------------------- applyMove --
 
   // Apply one swap. move = { r1,c1, r2,c2 } (orthogonally adjacent).
-  // opts.allowSpecials (default true) permits color-bomb activation swaps.
+  // opts.allowSpecials (default true) permits activation swaps (any swap with
+  // a color bomb, and special+special combos — see comboClear).
   // Returns { legal, board, pointers, scoreGained, cascades,
   //           specialCreated, specialFired }. On an illegal move: { legal:false }.
   function applyMove(board, refill, pointers, move, opts) {
@@ -415,38 +617,17 @@
     var A = board.grid[a.r][a.c], B = board.grid[d.r][d.c];
     if (A === null || B === null) return { legal: false };
 
-    // --- color-bomb activation ------------------------------------------
-    if (allowSpecials && (A.kind === "bomb" || B.kind === "bomb")) {
-      var initialCells = [];
-      var r, c;
-      if (A.kind === "bomb" && B.kind === "bomb") {
-        for (r = 0; r < board.rows; r++)
-          for (c = 0; c < board.cols; c++)
-            if (board.grid[r][c] !== null) initialCells.push({ r: r, c: c });
-      } else {
-        var other = A.kind === "bomb" ? B : A;
-        var targetColor = other.color; // stripe or normal color
-        var have = {};
-        for (r = 0; r < board.rows; r++) {
-          for (c = 0; c < board.cols; c++) {
-            var cd = board.grid[r][c];
-            if (cd === null) continue;
-            if (cd.color === targetColor || (cd.kind === "bomb")) {
-              // include all of the keyed color; also consume the bomb itself.
-              if (cd.color === targetColor || (r === a.r && c === a.c) || (r === d.r && c === d.c)) {
-                if (!have[key(r, c)]) { have[key(r, c)] = 1; initialCells.push({ r: r, c: c }); }
-              }
-            }
-          }
-        }
-        // ensure both swapped cells are consumed
-        if (!have[key(a.r, a.c)]) initialCells.push({ r: a.r, c: a.c });
-        if (!have[key(d.r, d.c)]) initialCells.push({ r: d.r, c: d.c });
+    // --- activation swaps (bomb swaps, special+special combos) -----------
+    if (allowSpecials) {
+      var combo = comboClear(board, a, d, A, B);
+      if (combo) {
+        var resB = resolveInternal(board, refill, pointers,
+          { type: "clear", cells: combo.cells, suppress: combo.suppress },
+          opts.trace);
+        resB.specialFired = true;
+        resB.legal = true;
+        return resB;
       }
-      var resB = resolveInternal(board, refill, pointers, { type: "clear", cells: initialCells }, opts.trace);
-      resB.specialFired = true;
-      resB.legal = true;
-      return resB;
     }
 
     // --- normal swap -----------------------------------------------------
