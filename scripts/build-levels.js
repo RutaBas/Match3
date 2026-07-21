@@ -122,6 +122,13 @@ function build() {
     // The opening Depths are meant to be gentle & teach the mechanic, so grant
     // bonus moves that taper off: +3 (Depths 1-2), +2 (3-4), +1 (5-6), +0 after.
     var moveBonus = Math.max(0, 4 - Math.ceil(depth / 2));
+    // Hard-band rebalance (players were stuck at 5 moves): from Depth 18 on,
+    // extra moves that taper as you descend — 18: +3 (8 mv), 19-20: +2 (7 mv),
+    // 21-24: +1 (6 mv). Depths 1-17 are DELIBERATELY untouched so a rebuild
+    // reproduces them byte-identically and existing players' records stay true.
+    if (depth === 18) moveBonus += 3;
+    else if (depth >= 19 && depth <= 20) moveBonus += 2;
+    else if (depth >= 21) moveBonus += 1;
     var budget = generator.TIERS[tier].budget + moveBonus;
 
     var lvl = generator.generate(tier, seed, { budget: budget });

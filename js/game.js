@@ -114,9 +114,25 @@
     saveGame();
   }
 
+  // Signature of a depth's DEFINITION (board+refill+moves+target). A mid-level
+  // save stores it; if a shipped rebalance changes that depth, the stale save is
+  // discarded (the depth restarts fresh) instead of resuming against the wrong
+  // level. tp-progress (stars/unlocked/streak) is never touched by this.
+  function levelSig(m) {
+    var s = JSON.stringify({ b: m.board, r: m.refill, mv: m.moves, t: m.target });
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+  function saveMatchesLevel(sv) {
+    var m = metaFor(sv.depth);
+    return !!m && sv.sig === levelSig(m);
+  }
+
   function resumeSave(sv) {
     var m = metaFor(sv.depth);
     if (!m) return false;
+    if (sv.sig !== levelSig(m)) { lsDel("tp-save"); return false; }
     G.depth = sv.depth; G.meta = m;
     G.board = { rows: m.board.rows, cols: m.board.cols, grid: cloneGrid(sv.board.grid) };
     G.refill = m.refill;
@@ -141,6 +157,7 @@
     if (G.over || !G.board) return;
     lsSet("tp-save", {
       depth: G.depth,
+      sig: levelSig(G.meta),
       board: { grid: G.board.grid },
       pointers: G.pointers,
       score: G.score, movesUsed: G.movesUsed,
@@ -724,7 +741,7 @@
     var cur = currentDepth();
     var sv = lsGet("tp-save", null);
     var cont = $("btn-continue");
-    if (sv && metaFor(sv.depth)) {
+    if (sv && saveMatchesLevel(sv)) {
       cont.textContent = "Continue · Depth " + sv.depth;
       cont.dataset.action = "resume";
     } else {
