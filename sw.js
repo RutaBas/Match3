@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v8";   // v8: chest labels + mystery challenge
+var CACHE_NAME = "tide-pool-v9";   // v9: flanking title pearls
 
 var LOCAL_ASSETS = [
   "./",
