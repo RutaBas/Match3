@@ -83,8 +83,9 @@ function round60(x) { return Math.round(x / 60) * 60; }
 function winTargetFor(certTarget, depth) {
   // FROZEN ramp: 0.35 at Depth 1 -> 1.0 at Depth 24, anchored to 24 forever so
   // extending the campaign never changes shipped targets. Depths 25+ cap at 0.9
-  // of the certified score: hard, but with lasting slack for imperfect play
-  // (demanding the full certified score means perfect play — Depth-24-only).
+  // of the certified score. (A softer 0.85/0.80 cap was prototyped and PAUSED
+  // at Ruta's request 2026-07-20 — revisit if the deep game still feels too
+  // demanding once combo play settles in.)
   var f = (depth > 24) ? 0.9 : (0.35 + 0.65 * (depth - 1) / 23);
   var wt = round60(certTarget * f);
   if (wt < 60) wt = 60;
@@ -92,23 +93,24 @@ function winTargetFor(certTarget, depth) {
   return wt;
 }
 
-// Star thresholds. The old version scaled up to the THEORETICAL max score M
-// (solver-optimal with specials), which made 3 stars require near-perfect play —
-// players got 1 star even clearing a level. Instead we anchor to `certTarget`,
-// the score the certified technique's line reaches: a strong-but-attainable
-// benchmark ("played well"), not "played perfectly". So:
-//   star1 = winTarget                              (you win)
-//   star2 = winTarget + 0.33*(certTarget-winTarget)
-//   star3 = winTarget + 0.66*(certTarget-winTarget)  (~2/3 toward good play)
+// Star thresholds, anchored to the WIN target (not the certified score).
+// History: v1 anchored stars toward the theoretical max (near-impossible);
+// v2 anchored toward certTarget (still "played nearly optimally" territory —
+// players cleared levels and got 1 star). v3: stars are a fixed, predictable
+// margin above what you needed to win:
+//   star1 = winTarget (you win)  ·  star2 = 1.15x win  ·  star3 = 1.35x win
+// clamped to the exhibited reachable max M so 3 stars is always provably
+// attainable, and to the certified score so it never demands perfect play.
 function starThresholds(level, winTarget) {
   var cap = Math.min(generator.TIERS[level.tier].nodeCap, STAR_NODE_CAP);
   var bs = solver.bestScore(level, { allowSpecials: true, nodeCap: cap });
   var M = Math.max(bs.score, level.target); // exhibited reachable max (>= certTarget)
-  var strong = Math.min(level.target, M);   // certTarget = the "good play" score
-  var gap = Math.max(0, strong - winTarget);
-  var star2 = round60(winTarget + 0.33 * gap);
-  var star3 = round60(winTarget + 0.66 * gap);
-  // keep strictly ascending & achievable
+  var star2 = round60(winTarget * 1.15);
+  var star3 = round60(winTarget * 1.35);
+  var ceil = Math.min(M, level.target);     // never above "good play", never above max
+  if (star3 > ceil) star3 = round60(ceil);
+  if (star2 >= star3) star2 = star3 - 60;
+  // keep strictly ascending above the win bar
   if (star2 <= winTarget) star2 = winTarget + 60;
   if (star3 <= star2) star3 = star2 + 60;
   if (star3 > M) star3 = round60(M);
