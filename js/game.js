@@ -16,6 +16,7 @@
   var SOLVER = window.CandySolver;
   var LEVELS = window.CANDY_LEVELS || [];
   var SND = window.TideSound;
+  var ECON = window.TideEconomy;
   var TOTAL = LEVELS.length;
 
   // creature palette, 1-indexed to match engine color ids
@@ -79,9 +80,13 @@
     down: null,
     animating: false,
     over: false,
+    clawArmed: false,
+    freeMove: false,
     geom: { ts: 44 },
     els: {}
   };
+  // dev/test hook, only with ?dev=1 in the URL — never active in normal play
+  if (typeof location !== "undefined" && /[?&]dev=1/.test(location.search)) window.__G = G;
 
   // ----------------------------------------------------- level lifecycle --
   function metaFor(depth) { return LEVELS[depth - 1]; }
@@ -107,11 +112,36 @@
     G.history = [];
     G.selected = null; G.down = null; G.animating = false; G.over = false;
     document.body.classList.remove("lose-desat");
+    applyStreakGift();
     show("game");
     layoutBoard();
     buildBoard(false);
     updateHUD();
     saveGame();
+  }
+
+  // Tide's Favor: pre-place free specials for a win streak (see economy.js).
+  // Conversions keep each creature's color, so no new matches can appear.
+  function applyStreakGift() {
+    var kinds = ECON ? ECON.streakGift(progress.streak || 0) : [];
+    if (!kinds.length) return;
+    var cells = [];
+    for (var r = 0; r < G.board.rows; r++)
+      for (var c = 0; c < G.board.cols; c++)
+        if (G.board.grid[r][c] && G.board.grid[r][c].kind === "normal") cells.push({ r: r, c: c });
+    var placed = 0;
+    for (var i = 0; i < kinds.length && cells.length; i++) {
+      var pick = cells.splice(Math.floor(Math.random() * cells.length), 1)[0];
+      var cd = G.board.grid[pick.r][pick.c];
+      cd.kind = (kinds[i] === "bomb") ? "bomb"
+              : (Math.random() < 0.5 ? "stripe-h" : "stripe-v");
+      placed++;
+    }
+    if (placed) {
+      var msg = "Tide's Favor: " + placed + " gift" + (placed > 1 ? "s" : "") +
+                " for your " + progress.streak + "-win streak";
+      setTimeout(function () { toast(msg); if (SND.special) SND.special(); }, 500);
+    }
   }
 
   // Signature of a depth's DEFINITION (board+refill+moves+target). A mid-level
@@ -138,7 +168,7 @@
     G.refill = m.refill;
     G.pointers = sv.pointers.slice();
     G.colorCount = m.colorCount;
-    G.moves = m.moves; G.target = m.target;
+    G.moves = sv.movesCap || m.moves; G.target = m.target;
     G.star2 = m.star2; G.star3 = m.star3;
     G.score = sv.score; G.movesUsed = sv.movesUsed;
     G.history = (sv.history || []).map(function (h) {
@@ -158,6 +188,7 @@
     lsSet("tp-save", {
       depth: G.depth,
       sig: levelSig(G.meta),
+      movesCap: G.moves,          // may exceed the level's base after a rescue
       board: { grid: G.board.grid },
       pointers: G.pointers,
       score: G.score, movesUsed: G.movesUsed,
@@ -307,6 +338,7 @@
     var cell = G.down.cell;
     G.down = null;
     if (G.animating || G.over) return;
+    if (G.clawArmed) { clawCell(cell); return; }   // Crab Claw targeting
     // tap logic
     if (!G.selected) { setSelected(cell); }
     else if (G.selected.r === cell.r && G.selected.c === cell.c) { clearSelected(); }
@@ -443,7 +475,8 @@
   function finishMove(res) {
     G.board = { rows: res.board.rows, cols: res.board.cols, grid: res.board.grid };
     G.pointers = res.pointers;
-    G.movesUsed += 1;
+    if (G.freeMove) G.freeMove = false;   // boosters don't consume a move
+    else G.movesUsed += 1;
     reconcileBoard(res.board);   // snap DOM to the authoritative final board
     // glint any freshly-formed specials that are still on the board
     for (var r = 0; r < G.board.rows; r++) for (var c = 0; c < G.board.cols; c++) {
@@ -456,7 +489,85 @@
     G.animating = false;
     updateHUD();   // after clearing animating, so the undo button re-enables
     if (G.score >= G.target) { win(); return; }
-    if (G.movesUsed >= G.moves) { lose(); return; }
+    if (G.movesUsed >= G.moves) { offerRescue(); return; }
+    saveGame();
+  }
+
+  // ------------------------------------------------- Phase 2: boosters --
+  // Second Wind: out of moves below target — offer +5 moves for shells
+  // instead of an immediate wash-out.
+  function offerRescue() {
+    if (!ECON || !ECON.canAfford("rescue")) { lose(); return; }
+    $("rescue-score").textContent = G.score;
+    $("rescue-target").textContent = G.target;
+    $("rescue").hidden = false;
+  }
+
+  function armClaw(on) {
+    G.clawArmed = on === undefined ? !G.clawArmed : !!on;
+    $("btn-claw").classList.toggle("armed", G.clawArmed);
+    document.body.classList.toggle("claw-armed", G.clawArmed);
+    if (G.clawArmed) toast("Tap a creature to claw it free");
+  }
+
+  // Crab Claw: pop one chosen creature (a special caught in the clear FIRES,
+  // same as the hammer in the big games). Runs through the real engine
+  // (resolveInternal) so gravity/refill/cascades/score stay authoritative.
+  function clawCell(cell) {
+    if (G.animating || G.over) return;
+    if (!ECON.spend("claw")) { armClaw(false); toast("Not enough shells"); return; }
+    armClaw(false);
+    G.animating = true;
+    clearHint(); clearSelected();
+    pushHistory();
+    var trace = [];
+    var res = L.resolveInternal(G.board, G.refill, G.pointers,
+      { type: "clear", cells: [{ r: cell.r, c: cell.c }] }, trace);
+    G.freeMove = true;
+    SND.special();
+    buzz(12);
+    animateResolution(null, null, res, trace, true);
+  }
+
+  // Rip Current: reshuffle the board (no move consumed). Retries until the
+  // layout has no ready-made match and at least one legal swap.
+  function ripCurrent() {
+    if (G.animating || G.over) return;
+    if (!ECON.spend("current")) { toast("Not enough shells"); return; }
+    clearHint(); clearSelected();
+    pushHistory();
+    var flat = [];
+    var r, c;
+    for (r = 0; r < G.board.rows; r++)
+      for (c = 0; c < G.board.cols; c++)
+        if (G.board.grid[r][c]) flat.push(G.board.grid[r][c]);
+    var best = null;
+    for (var attempt = 0; attempt < 80; attempt++) {
+      for (var i = flat.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = flat[i]; flat[i] = flat[j]; flat[j] = t;
+      }
+      var k = 0;
+      for (r = 0; r < G.board.rows; r++)
+        for (c = 0; c < G.board.cols; c++)
+          if (G.board.grid[r][c]) G.board.grid[r][c] = flat[k++];
+      if (L.findRuns(G.board).length === 0) {
+        best = "matchfree";
+        if (L.hasAnyLegalMove(G.board, G.refill, G.pointers)) { best = "good"; break; }
+      }
+    }
+    if (best === null) { // extremely unlikely; restore pre-shuffle state
+      var st = G.history.pop();
+      G.board = { rows: G.board.rows, cols: G.board.cols, grid: st.grid };
+      ECON.refund("current");
+      toast("The current stalled — shells refunded");
+      buildBoard(false); updateHUD(); return;
+    }
+    SND.cascade(1);
+    buzz([8, 30, 8]);
+    buildBoard(true);            // a whole-board event: the fall-in re-deal
+    toast("The current stirs the pool…");
+    updateHUD();
     saveGame();
   }
 
@@ -516,6 +627,7 @@
   // ------------------------------------------------------------- undo --
   function undo() {
     if (G.animating || G.over || !G.history.length) return;
+    if (G.clawArmed) armClaw(false);
     var st = G.history.pop();
     G.board = { rows: G.board.rows, cols: G.board.cols, grid: cloneGrid(st.grid) };
     G.pointers = st.pointers.slice();
@@ -613,6 +725,11 @@
     document.querySelector(".pbar").classList.toggle("done", G.score >= G.target);
     $("btn-undo").disabled = !G.history.length || G.animating;
     $("btn-mute").innerHTML = SND.isMuted() ? "&#128263;" : "&#128266;";
+    if (ECON) {
+      $("shellsPill").innerHTML = "&#128026; " + ECON.balance();
+      $("btn-claw").disabled = G.animating || !ECON.canAfford("claw");
+      $("btn-current").disabled = G.animating || !ECON.canAfford("current");
+    }
   }
 
   // ------------------------------------------------------------- win --
@@ -647,6 +764,17 @@
     }
     $("win-moves").textContent = G.movesUsed + "/" + G.moves;
     $("win-streak").textContent = "×" + progress.streak;
+
+    // shell rewards (base + stars + daily dive + star milestones)
+    if (ECON) {
+      var rw = ECON.awardWin(G.meta.tier, earned, totalStars());
+      var bits = [rw.base + " win", rw.stars + " stars"];
+      if (rw.daily) bits.push(rw.daily + " daily dive");
+      rw.milestones.forEach(function (m) { bits.push(m.bonus + " for " + m.at + "★ milestone"); });
+      $("reward-total").textContent = rw.total;
+      $("reward-detail").textContent = bits.join(" · ");
+      $("win-reward").hidden = false;
+    }
     // hide Next Depth on the final depth
     $("btn-win-next").style.display = (G.depth >= TOTAL) ? "none" : "";
 
@@ -737,6 +865,7 @@
     $("stat-stars").textContent = totalStars();
     $("stat-depth").textContent = highestUnlocked();
     $("stat-streak").textContent = progress.streak || 0;
+    if (ECON) $("stat-shells").textContent = ECON.balance();
 
     var cur = currentDepth();
     var sv = lsGet("tp-save", null);
@@ -920,9 +1049,32 @@
     board.addEventListener("pointercancel", function () {
       if (G.down) { pressTile(G.down.cell, false); G.down = null; }
     });
-    $("btn-back").addEventListener("click", function () { saveGame(); show("home"); });
+    $("btn-back").addEventListener("click", function () { armClaw(false); saveGame(); show("home"); });
     $("btn-undo").addEventListener("click", undo);
     $("btn-hint").addEventListener("click", hint);
+
+    // Phase 2 boosters
+    $("btn-claw").addEventListener("click", function () {
+      if (G.animating || G.over) return;
+      if (!ECON.canAfford("claw")) { toast("Not enough shells — win Depths to earn more"); return; }
+      SND.select(); armClaw();
+    });
+    $("btn-current").addEventListener("click", function () {
+      armClaw(false);
+      ripCurrent();
+    });
+    $("rescue-yes").addEventListener("click", function () {
+      if (!ECON.spend("rescue")) { $("rescue").hidden = true; lose(); return; }
+      $("rescue").hidden = true;
+      G.moves += 5;
+      SND.win(); buzz([10, 30, 10]);
+      toast("Second wind — 5 more moves");
+      updateHUD(); saveGame();
+    });
+    $("rescue-no").addEventListener("click", function () {
+      $("rescue").hidden = true;
+      lose();
+    });
     $("btn-mute").addEventListener("click", function () {
       SND.toggle(); updateHUD(); if (!SND.isMuted()) SND.select();
     });

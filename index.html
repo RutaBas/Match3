@@ -42,6 +42,7 @@
           <span>&#11088; <b id="stat-stars">0</b></span>
           <span>&#127754; Depth <b id="stat-depth">1</b></span>
           <span>&#128293; <b id="stat-streak">0</b></span>
+          <span>&#128026; <b id="stat-shells">0</b></span>
         </div>
         <button class="play" id="btn-continue">Continue</button>
         <button class="howto-link" id="btn-howto">How to play</button>
@@ -74,6 +75,9 @@
     <div class="actions">
       <button id="btn-undo" class="act" disabled><span class="ai">&#8630;</span>Undo</button>
       <button id="btn-hint" class="act"><span class="ai">&#9788;</span>Hint</button>
+      <button id="btn-claw" class="act boost"><span class="ai">&#129408;</span>Claw <b class="cost">60&#128026;</b></button>
+      <button id="btn-current" class="act boost"><span class="ai">&#127754;</span>Shuffle <b class="cost">40&#128026;</b></button>
+      <span class="shells-pill" id="shellsPill">&#128026; 0</span>
     </div>
   </main>
 
@@ -95,6 +99,10 @@
         <div class="stat"><div class="n" id="win-score">0</div><div class="l">Score</div></div>
         <div class="stat"><div class="n" id="win-moves">0</div><div class="l">Moves</div></div>
         <div class="stat"><div class="n" id="win-streak">0</div><div class="l">Streak</div></div>
+      </div>
+      <div class="reward" id="win-reward" hidden>
+        <span class="reward-total">+<b id="reward-total">0</b> &#128026;</span>
+        <span class="reward-detail" id="reward-detail"></span>
       </div>
       <div class="btn-row">
         <button class="btn ghost" id="btn-win-map">Map</button>
@@ -132,6 +140,17 @@
     <div class="thinking-text">reading the current&hellip;</div>
   </div>
 
+  <!-- ===================== SECOND WIND (out-of-moves rescue) ============ -->
+  <div id="rescue" class="modal" hidden>
+    <div class="panel">
+      <b>Out of moves&hellip;</b>
+      <p class="rescue-sub">The tide isn't done with you yet. Keep this dive going?</p>
+      <div class="rescue-need"><span id="rescue-score">0</span> / <span id="rescue-target">0</span> reached</div>
+      <button id="rescue-yes" class="btn primary wide">+5 moves &mdash; 100&#128026;</button>
+      <button id="rescue-no" class="btn ghost wide">Wash out</button>
+    </div>
+  </div>
+
   <!-- ===================== HOW TO PLAY ===================== -->
   <div id="howto" class="modal" hidden>
     <div class="panel">
@@ -154,6 +173,7 @@
   <script src="src/solver.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/sound.js"></script>
+  <script src="js/economy.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

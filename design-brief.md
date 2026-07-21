@@ -82,6 +82,18 @@ Sounds synthesized with Web Audio (no asset files). `design-sound.html` offers 2
 - **Lose screen ("Washed out"):** score-vs-target, encouraging line, **Retry** / level-map.
   (This game can be lost — real lose screen required.)
 
+## Phase 2 (shipped later) — Shell economy & boosters
+One currency, **Shells 🐚**, no inventory (buy-at-use). Levels remain solver-certified
+winnable **without** any booster — boosters only ever help.
+- **Earning:** win = 20/30/40 by tier + 10/star · first win each day ("Daily Dive") +50 ·
+  star milestones (10/25/50/100…★) +100 · new players start with 150.
+- **Boosters:** **Crab Claw** 60🐚 (pop any one creature — runs through the real engine, a
+  clawed special fires; no move consumed) · **Rip Current** 40🐚 (reshuffle to a match-free
+  layout with a legal move; refunds itself if impossible) · **Second Wind** 100🐚 (at
+  out-of-moves below target: +5 moves instead of washing out).
+- **Tide's Favor** (free, automatic): win streak pre-places specials at level start —
+  1 win → a current; 2 → two currents; 3+ → two currents + a pearl. Resets on a loss.
+
 ## Stage 8 — App-store-level extras
 Manifest: real **pearl/tide app icon**, theme color `#17292A`, splash to match. iOS meta tags +
 safe-area insets (notch/home-bar). Block pull-to-refresh & text-selection on the board. Offline

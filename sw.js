@@ -1,6 +1,6 @@
 /* Tide Pool service worker — cache-first app shell for offline play.
    Bump CACHE_NAME on every deploy to invalidate the old shell. */
-var CACHE_NAME = "tide-pool-v1";
+var CACHE_NAME = "tide-pool-v2";   // v2: Phase 2 shell economy + boosters
 
 var LOCAL_ASSETS = [
   "./",
@@ -8,6 +8,7 @@ var LOCAL_ASSETS = [
   "css/style.css",
   "js/game.js",
   "js/sound.js",
+  "js/economy.js",
   "js/levels.js",
   "js/hint-worker.js",
   "src/rng.js",

@@ -18,6 +18,12 @@ PWA. Built to Ruta's puzzle-game playbook.
 - **Win** a Depth by reaching its **target score** before you run out of **moves**. Winning
   unlocks the next Depth. Earn up to **3 stars** for beating the target with room to spare.
 - **Undo** takes back your last move; **Hint** (solver-powered) glows the next winning swap.
+- **Shells 🐚** are earned by winning (more for stars, a Daily Dive bonus for your first win
+  each day, and star-milestone payouts) and spent on boosters: the **Crab Claw** (pop any one
+  creature), the **Rip Current** (reshuffle the board), and **Second Wind** (+5 moves when
+  you'd otherwise wash out). Win streaks also earn **Tide's Favor** — free specials pre-placed
+  at the start of your next dive (reset on a loss). Every level is still provably winnable
+  without spending a single shell.
 
 ## The idea that makes it a puzzle, not a slot machine
 Real Candy Crush refills candies **randomly**, so "is this level winnable?" is meaningless. Tide
