@@ -54,7 +54,6 @@
           <span class="ch-txt"><b>Daily Challenge</b><i id="ch-desc">A mystery dive awaits</i></span>
           <span class="ch-reward" id="ch-reward">+100&#128026;</span>
         </button>
-        <button class="howto-link" id="btn-howto">How to play</button>
       </div>
       <div class="trail" id="trail">
         <div class="trail-inner" id="trailInner"></div>
@@ -191,10 +190,14 @@
 
   <!-- ===================== SECOND WIND (out-of-moves rescue) ============ -->
   <div id="rescue" class="modal" hidden>
-    <div class="panel">
+    <div class="panel rescue-panel">
+      <div class="rescue-ring" aria-hidden="true">&#129767;</div>
       <b>Out of moves&hellip;</b>
-      <p class="rescue-sub">The tide isn't done with you yet. Keep this dive going?</p>
-      <div class="rescue-need"><span id="rescue-score">0</span> / <span id="rescue-target">0</span> reached</div>
+      <p class="rescue-sub">The tide isn't done with you yet &mdash; one more push?</p>
+      <div class="lose-progress">
+        <div class="lose-progress-bar"><i id="rescue-fill"></i></div>
+        <div class="lose-progress-label"><b id="rescue-pct">0%</b> of the way &middot; <span id="rescue-score">0</span> / <span id="rescue-target">0</span></div>
+      </div>
       <button id="rescue-yes" class="btn primary wide">+5 moves &mdash; 100&#128026;</button>
       <button id="rescue-no" class="btn ghost wide">Wash out</button>
     </div>

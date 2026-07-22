@@ -581,9 +581,15 @@
   // instead of an immediate wash-out.
   function offerRescue() {
     if (!ECON || !ECON.canAfford("rescue")) { lose(); return; }
+    var pct = Math.max(0, Math.round(G.score / G.target * 100));
     $("rescue-score").textContent = G.score;
     $("rescue-target").textContent = G.target;
+    $("rescue-pct").textContent = pct + "%";
+    $("rescue-fill").style.width = "0%";
     $("rescue").hidden = false;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { $("rescue-fill").style.width = Math.min(100, pct) + "%"; });
+    });
   }
 
   function armClaw(on) {
@@ -1309,8 +1315,7 @@
       if (G.challenge) startChallenge(G.depth); else startDepth(G.depth);
     });
 
-    // how to play — opened on demand from the home button (never auto-shown)
-    $("btn-howto").addEventListener("click", function () { $("howto").hidden = false; });
+    // how to play — opened from Settings (never auto-shown)
     $("howto-close").addEventListener("click", function () { $("howto").hidden = true; lsSet("tp-seen", 1); });
 
     window.addEventListener("resize", function () {
