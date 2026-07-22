@@ -289,7 +289,8 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
   font-weight:700; font-size:1.25rem; color:var(--gold); animation:fadein .4s ease both .3s; }
 
 .rescue-panel{ text-align:center; }
-.rescue-ring{ font-size:2.4rem; display:inline-block; margin-bottom:4px; animation:badgeBob 3s ease-in-out infinite; }
+/* the same wave badge as the lose screen (.lose-badge), sized for the modal */
+.rescue-badge{ width:88px; height:88px; margin:2px auto var(--sp3); font-size:2.4rem; }
 .rescue-sub{ margin:0 0 var(--sp3); font-size:.9rem; color:var(--sub); }
 .rescue-need{ text-align:center; font-family:'Quicksand',sans-serif; font-weight:700;
   color:var(--aqua); margin-bottom:var(--sp3); }
