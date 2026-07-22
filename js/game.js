@@ -980,7 +980,10 @@
   }
 
   // ------------------------------------------------------------- lose --
-  function lose() {
+  // `instant`: skip the desaturate pause and reveal the lose screen immediately.
+  // Used when coming from the rescue modal, so the in-game board never flashes
+  // between the modal closing and the lose screen appearing.
+  function lose(instant) {
     G.over = true;
     clearSelected();
     if (!G.challenge) {                      // a lost challenge costs nothing
@@ -1022,11 +1025,13 @@
     }
     document.body.classList.add("lose-desat");
     SND.lose(); buzz([12, 30, 12]);
-    setTimeout(function () {
+    var reveal = function () {
       show("lose");
       countUp($("lose-score"), G.score, 800);
       $("lose-prog-fill").style.width = Math.min(100, pct) + "%";
-    }, prefersReduced() ? 0 : 620);
+    };
+    if (instant || prefersReduced()) reveal();
+    else setTimeout(reveal, 620);
   }
 
   // ------------------------------------------------------------- share --
@@ -1267,7 +1272,7 @@
     });
     $("rescue-no").addEventListener("click", function () {
       $("rescue").hidden = true;
-      lose();
+      lose(true);   // straight to the lose screen — no in-game flash behind the modal
     });
 
     // daily chest + challenge

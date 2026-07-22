@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v14";   // v14: rescue uses the lose wave badge
+var CACHE_NAME = "tide-pool-v15";   // v15: no board flash rescue->lose
 
 var LOCAL_ASSETS = [
   "./",
