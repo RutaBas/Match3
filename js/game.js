@@ -1084,7 +1084,7 @@
     var trail = $("trail");
     var inner = $("trailInner");
     var W = Math.max(240, Math.min(trail.clientWidth, 340));
-    var H = NODE_TOP + (TOTAL - 1) * NODE_GAP + 90;
+    var H = NODE_TOP + (TOTAL - 1) * NODE_GAP + 130;
     inner.style.width = W + "px";
     inner.style.height = H + "px";
     var cx = W / 2, amp = W * 0.30;
@@ -1134,11 +1134,22 @@
     }
     inner.innerHTML = html;
 
-    // auto-scroll to the current Depth
-    requestAnimationFrame(function () {
-      var target = Math.max(0, curY - trail.clientHeight / 2);
-      trail.scrollTop = target;
-    });
+    // Auto-scroll to the current Depth. This can race with layout: on the
+    // first frame after a screen swap the trail may still have zero height
+    // (mid fade-in, or not yet displayed), which would leave the map pinned at
+    // the top. Retry across a few frames until the container has laid out and
+    // the scroll position actually lands.
+    var tries = 0;
+    (function centerOnCurrent() {
+      var h = trail.clientHeight;
+      if (h > 0) {
+        var maxTop = Math.max(0, trail.scrollHeight - h);
+        var target = Math.min(maxTop, Math.max(0, curY - h / 2));
+        trail.scrollTop = target;
+        if (Math.abs(trail.scrollTop - target) < 2) return; // landed
+      }
+      if (tries++ < 30) requestAnimationFrame(centerOnCurrent);
+    })();
   }
 
   // ------------------------------------------------------------- screens --
