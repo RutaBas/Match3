@@ -95,8 +95,11 @@ b{ font-variant-numeric:tabular-nums; }
    mask-image to a momentum-scrolling container, so the mask was invisible on
    iPhone. This gradient sits above the scrolling nodes and dissolves them into
    the deep-water colour (#0a1718, matching the .water gradient's base). */
-.trail-fade{ position:absolute; left:0; right:0; bottom:0; height:150px; z-index:6;
-  pointer-events:none;
+/* Extend through the bottom safe-area inset (home indicator) to the physical
+   screen edge — bottom:0 would stop the overlay at the content edge, leaving a
+   hard tint boundary above the inset that read as a solid horizontal stripe. */
+.trail-fade{ position:absolute; left:0; right:0; bottom:calc(-1 * var(--safe-b));
+  height:calc(150px + var(--safe-b)); z-index:6; pointer-events:none;
   background:linear-gradient(to bottom,
     rgba(18,42,38,0) 0%,
     rgba(15,34,31,.30) 55%,
