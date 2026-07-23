@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v20";   // v20: extend trail fade through safe area (no bottom stripes)
+var CACHE_NAME = "tide-pool-v21";   // v21: home map full-bleed at bottom (no exposed seabed band)
 
 var LOCAL_ASSETS = [
   "./",
