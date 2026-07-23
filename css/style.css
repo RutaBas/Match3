@@ -95,13 +95,12 @@ b{ font-variant-numeric:tabular-nums; }
    mask-image to a momentum-scrolling container, so the mask was invisible on
    iPhone. This gradient sits above the scrolling nodes and dissolves them into
    the deep-water colour (#0a1718, matching the .water gradient's base). */
-.trail-fade{ position:absolute; left:0; right:0; bottom:0; height:132px; z-index:6;
+.trail-fade{ position:absolute; left:0; right:0; bottom:0; height:150px; z-index:6;
   pointer-events:none;
   background:linear-gradient(to bottom,
-    transparent 0,
-    rgba(10,23,24,.55) 42%,
-    rgba(10,23,24,.92) 78%,
-    #0a1718 100%); }
+    rgba(18,42,38,0) 0%,
+    rgba(15,34,31,.30) 55%,
+    rgba(12,27,25,.58) 100%); }
 .trail::-webkit-scrollbar{ width:0; }
 .trail-inner{ position:relative; margin:0 auto; }
 .connector{ position:absolute; top:0; left:0; z-index:1; pointer-events:none; overflow:visible; }
