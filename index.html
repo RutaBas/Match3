@@ -36,6 +36,7 @@
     <div class="creatures-bg" id="creaturesBg" aria-hidden="true"></div>
     <div class="seabed" aria-hidden="true"></div>
     <button id="btn-settings" class="home-gear" aria-label="Settings">&#9881;</button>
+    <div class="decor-layer" id="decorLayer" aria-hidden="true"></div>
 
     <div class="home-content">
       <div class="home-top">
@@ -52,15 +53,37 @@
           <span>&#128026; <b id="stat-shells">0</b></span>
         </div>
         <button class="play" id="btn-continue">Continue</button>
-        <button class="challenge-card" id="btn-challenge">
-          <span class="ch-ic">&#127919;</span>
-          <span class="ch-txt"><b>Daily Challenge</b><i id="ch-desc">A mystery dive awaits</i></span>
-          <span class="ch-reward" id="ch-reward">+100&#128026;</span>
+        <div class="modes">
+          <button class="mode" id="btn-challenge">
+            <span class="m-ic">&#127919;</span>
+            <span class="m-name" id="ch-name">Daily</span>
+            <span class="m-badge" id="ch-reward">+100&#128026;</span>
+          </button>
+          <button class="mode" id="btn-weekly">
+            <span class="m-ic">&#127754;</span>
+            <span class="m-name">Weekly</span>
+            <span class="m-badge" id="wk-reward">0/7</span>
+          </button>
+          <button class="mode" id="btn-trench">
+            <span class="m-ic">&#127786;</span>
+            <span class="m-name">Trench</span>
+            <span class="m-badge" id="tr-best">new</span>
+          </button>
+        </div>
+      </div>
+      <div class="maprow">
+        <button id="btn-album" class="home-icon" aria-label="Field album">&#128214;</button>
+        <button class="zone-pill" id="btn-zone" aria-haspopup="dialog">
+          <span class="zp-name" id="zone-name">Shallows</span>
+          <span class="zp-stars" id="zone-stars">&#9733; 0/30</span>
+          <span class="zp-caret" aria-hidden="true">&#9662;</span>
         </button>
+        <button id="btn-shop" class="home-icon" aria-label="Decorate your rockpool">&#129001;</button>
       </div>
       <div class="trail" id="trail">
         <div class="trail-inner" id="trailInner"></div>
       </div>
+      <button class="here-btn" id="btn-here" hidden>&#9679; Back to Depth <b id="here-depth">1</b></button>
       <div class="trail-fade" aria-hidden="true"></div>
     </div>
   </main>
@@ -74,11 +97,13 @@
       <button id="btn-mute" class="iconbtn" aria-label="Mute">&#128266;</button>
     </div>
 
+    <div class="objgoal" id="objGoal" hidden></div>
     <div class="progress">
       <div class="pbar"><i id="pbarFill"></i></div>
       <div class="pscore"><b id="scoreNow">0</b> <span>/ <b id="scoreTarget">0</b></span></div>
     </div>
 
+    <div class="coach" id="coach" hidden><span id="coach-text"></span></div>
     <div class="board-wrap">
       <div class="board" id="board"></div>
       <div class="board-fx" id="boardFx" aria-hidden="true"></div>
@@ -112,6 +137,11 @@
         <div class="stat"><div class="n" id="win-moves">0</div><div class="l">Moves</div></div>
         <div class="stat"><div class="n" id="win-streak">0</div><div class="l">Streak</div></div>
       </div>
+      <div class="find" id="win-find" hidden>
+        <span class="find-ic" id="find-ic">&#128031;</span>
+        <span class="find-txt"><b id="find-name">Species</b><i id="find-note">note</i></span>
+      </div>
+      <div class="dp-stars end-stars" id="win-bands" hidden></div>
       <div class="reward" id="win-reward" hidden>
         <span class="reward-total">+<b id="reward-total">0</b> &#128026;</span>
         <span class="reward-detail" id="reward-detail"></span>
@@ -145,6 +175,7 @@
         <div class="stat"><div class="n" id="lose-target">0</div><div class="l">Target</div></div>
         <div class="stat"><div class="n" id="lose-short">0</div><div class="l">Short by</div></div>
       </div>
+      <div class="dp-stars end-stars" id="lose-bands" hidden></div>
       <div class="btn-row">
         <button class="btn ghost" id="btn-lose-map">Map</button>
         <button class="btn primary" id="btn-lose-retry">Dive again</button>
@@ -192,6 +223,72 @@
     </div>
   </div>
 
+  <!-- ===================== FIELD ALBUM ===================== -->
+  <div id="album-modal" class="modal" hidden>
+    <div class="panel album-panel">
+      <b>Field Album</b>
+      <p class="chest-sub"><b id="album-count">0</b> of <b id="album-total">30</b> species logged
+        &middot; <span id="album-next">clear Depth 1 to log your first</span></p>
+      <div class="album-grid" id="album-grid"></div>
+      <button id="album-close" class="btn primary wide">Close</button>
+    </div>
+  </div>
+
+  <!-- ===================== ROCKPOOL (decor shop) ===================== -->
+  <div id="shop-modal" class="modal" hidden>
+    <div class="panel shop-panel">
+      <b>Your Rockpool</b>
+      <p class="chest-sub">Spend shells on the pool itself. Cosmetic only &mdash; nothing here
+        changes a Depth. Up to three of each &mdash; use &minus;/+ to set how many are out.
+        <span class="shop-bal">&#128026; <b id="shop-shells">0</b></span></p>
+      <div class="shop-grid" id="shop-grid"></div>
+      <button id="shop-close" class="btn primary wide">Done</button>
+    </div>
+  </div>
+
+  <!-- ===================== DEPTH CARD (level select) ===================== -->
+  <div id="depth-modal" class="modal" hidden>
+    <div class="panel depth-panel">
+      <div class="dp-head">
+        <b id="dp-title">Depth 1</b>
+        <span class="dp-zone" id="dp-zone">Shallows &middot; Easy</span>
+      </div>
+      <div class="dp-goal" id="dp-goal">Reach 4,080</div>
+      <div class="dp-best" id="dp-best">Not yet dived</div>
+      <div class="dp-stars" id="dp-stars"></div>
+      <div class="btn-row">
+        <button class="btn ghost" id="dp-close">Close</button>
+        <button class="btn primary" id="dp-dive">Dive</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== ZONE PICKER ===================== -->
+  <div id="zone-modal" class="modal" hidden>
+    <div class="panel zone-panel">
+      <b>Jump to a zone</b>
+      <p class="chest-sub">Ten stretches of the descent. Stars show what each still owes you.</p>
+      <div class="zone-grid" id="zone-grid"></div>
+      <button id="zone-close" class="btn primary wide">Close</button>
+    </div>
+  </div>
+
+  <!-- ===================== WEEKLY TIDE ===================== -->
+  <div id="weekly-modal" class="modal" hidden>
+    <div class="panel weekly-panel">
+      <b>Weekly Tide</b>
+      <p class="chest-sub">A new dive rises each day. Clear all seven before the
+        tide turns on Monday for <b>+400&#128026;</b>.</p>
+      <div class="week-track" id="week-track"></div>
+      <div class="week-foot">
+        <div class="week-progress"><i id="week-fill"></i></div>
+        <div class="week-label"><b id="week-count">0</b> of 7 cleared
+          &middot; <span id="week-earned">0</span>&#128026; earned</div>
+      </div>
+      <button id="weekly-close" class="btn primary wide">Done</button>
+    </div>
+  </div>
+
   <!-- ===================== SECOND WIND (out-of-moves rescue) ============ -->
   <div id="rescue" class="modal" hidden>
     <div class="panel rescue-panel">
@@ -218,6 +315,12 @@
         <li><span>&#128142;</span> Match <b>5</b> to form a <b>pearl</b> &mdash; swap it to clear every creature of one colour.</li>
         <li><span>&#129439;</span> Match 5 in an <b>L or T shape</b> to form an <b>urchin</b> &mdash; it blasts everything around it.</li>
         <li><span>&#127937;</span> Reach the <b>target</b> before your moves run out to surface and unlock the next Depth.</li>
+        <li><span>&#129380;</span> Some Depths ask for a <b>catch</b> instead of a score &mdash; collect enough of one creature before your moves run out. The bar counts creatures, and the banner says which kind.</li>
+        <li><span>&#127754;</span> Run out of legal swaps? The tide turns the pool over <b>free</b> &mdash; no move, no shells.</li>
+        <li><span>&#128205;</span> The map is split into <b>zones</b>. Tap one to jump there, and check its star count to find Depths worth another dive.</li>
+        <li><span>&#127760;</span> Tap any Depth on the map to see its goal, your best, and what each <b>star</b> needs before you dive.</li>
+        <li><span>&#128214;</span> Clearing certain Depths logs a creature in your <b>field album</b> &mdash; 30 species with a note on each.</li>
+        <li><span>&#129001;</span> Spend shells on <b>your rockpool</b> (top left): anemones, coral, drifting jellies. Buy up to <b>three of each</b>, and use the &minus;/+ on a row to choose how many are out. Cosmetic only, yours for good, and rearranging is always free.</li>
       </ul>
       <b class="how-h">Combos — swap two specials together</b>
       <ul class="how">
@@ -238,7 +341,9 @@
       <ul class="how">
         <li><span>&#127942;</span> Win a Depth: <b>20&ndash;40&#128026;</b> (deeper pays more) <b>+10&#128026; per star</b>.</li>
         <li><span>&#127873;</span> <b>Daily Dive chest</b>: opens on your first visit each day. Rewards climb for 7 straight days (20 &rarr; 150&#128026;), then the cycle restarts. Miss a day and the tide washes you back to day 1.</li>
-        <li><span>&#127919;</span> <b>Daily Challenge</b>: one featured Depth a day (same for everyone) &mdash; reach its <b>3-star score</b> for <b>+100&#128026;</b>. Retry as often as you like; your campaign progress is untouched.</li>
+        <li><span>&#127919;</span> <b>Daily Tide</b>: one board a day, the same for every player, recoloured so it is nobody's re-run &mdash; reach its <b>3-star score</b> for <b>+100&#128026;</b>, plus <b>+25&#128026; per day of streak</b> (up to +200). Retry as often as you like; your campaign progress is untouched.</li>
+        <li><span>&#127786;</span> <b>The Trench</b>: an endless descent your device builds and checks as you go. Every rung is proven winnable before you see it. Clear a rung to earn shells and go deeper; lose one and the run ends with your best depth banked.</li>
+        <li><span>&#127754;</span> <b>Weekly Tide</b>: seven featured Depths, one rising each day from Monday to Sunday. Clear one for <b>+60&#128026;</b>; clear all seven before the week turns for <b>+400&#128026;</b>. A tide you miss stays open until Monday, and campaign progress is untouched.</li>
         <li><span>&#11088;</span> <b>Star milestones</b>: reaching 10, 25, 50, 100&hellip; total stars pays <b>+100&#128026;</b> each. Replaying old Depths for 3 stars counts!</li>
         <li><span>&#128293;</span> <b>Tide's Favor</b> (free): win streaks start your next dive with gift specials &mdash; 1 win &rarr; a current, 2 &rarr; two currents, 3+ &rarr; two currents <em>and</em> a pearl. A loss resets it.</li>
       </ul>
@@ -251,9 +356,13 @@
   <script src="src/rng.js"></script>
   <script src="src/logic.js"></script>
   <script src="src/solver.js"></script>
+  <script src="src/transform.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/sound.js"></script>
   <script src="js/economy.js"></script>
+  <script src="js/album.js"></script>
+  <script src="js/decor.js"></script>
+  <script src="js/endless.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

@@ -56,6 +56,40 @@
     return level.pointers ? level.pointers.slice() : zeros(level.board.cols);
   }
 
+  // ------------------------------------------------------------ objectives --
+  //
+  // What the player must achieve within the move budget:
+  //   { type:"score",   amount:N }           — bank N points (the classic Depth)
+  //   { type:"collect", color:k, amount:N }  — clear N creatures of colour k
+  //
+  // The whole search is written against a scalar PROGRESS metric rather than
+  // score specifically. That is what makes a new objective type sound for free:
+  // the DFS, its short-circuit, and its transposition memo only ever assume that
+  // progress is (a) non-negative per move and (b) additive along a line, so "the
+  // maximum additional progress reachable from this state" stays a property of
+  // the state alone — exactly the invariant the memo relies on. Any objective
+  // expressible as a sum of per-move contributions inherits the existing
+  // soundness proof unchanged.
+  //
+  // Score remains tracked alongside progress on every path, because stars are
+  // still awarded on score even when the win condition is something else.
+  function objectiveOf(level) {
+    return level.objective || { type: "score", amount: level.target };
+  }
+  function progressFn(objective) {
+    if (objective && objective.type === "collect") {
+      var k = objective.color;
+      return function (res) { return (res.collected && res.collected[k]) || 0; };
+    }
+    return function (res) { return res.scoreGained; };
+  }
+  function objectiveLabel(objective) {
+    if (objective && objective.type === "collect") {
+      return "collect " + objective.amount + " of colour " + objective.color;
+    }
+    return "score " + (objective ? objective.amount : "?");
+  }
+
   // ---------------------------------------------------------------- search --
 
   // The single search engine. DFS over legal-swap sequences bounded by the move
@@ -85,6 +119,8 @@
     var noSpecial = opts.allowSpecials === false;
     var target = (opts.target === undefined) ? Infinity : opts.target;
     var nodeCap = opts.nodeCap || DEFAULT_NODE_CAP;
+    // progress metric — score by default, or whatever the objective measures
+    var gain = opts.gain || progressFn(opts.objective || objectiveOf(level));
     var refill = level.refill;
     var budget = level.moves;
     var memo = {};
@@ -107,11 +143,12 @@
       var completed = true;
       for (var i = 0; i < moves.length; i++) {
         var res = moves[i].res;
-        var child = dfs(res.board, res.pointers, movesLeft - 1, need - res.scoreGained);
+        var g = gain(res);
+        var child = dfs(res.board, res.pointers, movesLeft - 1, need - g);
         if (child.win) {
           return { win: true, seq: [moves[i].move].concat(child.seq) };
         }
-        var tot = res.scoreGained + child.max;
+        var tot = g + child.max;
         if (tot > best.max) best = { max: tot, seq: [moves[i].move].concat(child.seq) };
         if (child.capped || st.overflow) { completed = false; break; }
       }
@@ -132,18 +169,34 @@
     opts = opts || {};
     var r = search(level, { allowSpecials: opts.allowSpecials !== false,
                             target: Infinity, nodeCap: opts.nodeCap,
-                            initialPointers: opts.initialPointers });
+                            initialPointers: opts.initialPointers,
+                            gain: opts.gain, objective: opts.objective });
     return { score: r.score, sequence: r.sequence, overflow: r.overflow };
+  }
+
+  // EXACT maximum progress toward `objective` reachable within the budget.
+  // For a collect objective this is "the most creatures of that colour any line
+  // can clear" — the number the generator sets a forgiving goal underneath, so
+  // the goal is always backed by an exhibited line. Same overflow caveat as
+  // bestScore: capped => the returned figure is a safe LOWER bound.
+  function bestProgress(level, objective, opts) {
+    opts = opts || {};
+    return bestScore(level, { allowSpecials: opts.allowSpecials !== false,
+                              nodeCap: opts.nodeCap,
+                              initialPointers: opts.initialPointers,
+                              objective: objective });
   }
 
   // Can a line reach `target` (default level.target) under the technique?
   // Short-circuits. returns { win, score, sequence, overflow }.
   function canReach(level, opts) {
     opts = opts || {};
-    var target = opts.target === undefined ? level.target : opts.target;
+    var objective = opts.objective || objectiveOf(level);
+    var target = opts.target === undefined ? objective.amount : opts.target;
     return search(level, { allowSpecials: opts.allowSpecials !== false,
                            target: target, nodeCap: opts.nodeCap,
-                           initialPointers: opts.initialPointers });
+                           initialPointers: opts.initialPointers,
+                           objective: objective, gain: opts.gain });
   }
 
   // ------------------------------------------------------- ground truth --
@@ -153,36 +206,44 @@
   // score, and reports the winning PREFIX (first move whose cumulative score
   // reaches target). Returns { win, valid, score, movesUsed, sequence, board,
   // steps, reason }. The solver relies on this to certify every win it reports.
-  function replaySequence(level, sequence) {
+  // `objective` defaults to the level's own. `progress` in the result is the
+  // objective metric (== score for a score objective); `score` is always the
+  // banked points, because stars ride on score whatever the win condition is.
+  function replaySequence(level, sequence, objective) {
+    objective = objective || objectiveOf(level);
+    var gain = progressFn(objective);
+    var goal = objective.amount;
     var board = logic.cloneBoard(level.board);
     var pointers = startPointers(level);
-    var score = 0, steps = [];
+    var score = 0, progress = 0, steps = [];
     for (var i = 0; i < sequence.length; i++) {
       var mv = sequence[i];
       var res = logic.applyMove(board, level.refill, pointers, mv, { allowSpecials: true });
       if (!res.legal) {
-        return { win: false, valid: false, score: score, movesUsed: i,
+        return { win: false, valid: false, score: score, progress: progress, movesUsed: i,
                  sequence: sequence.slice(0, i), board: board, steps: steps,
                  reason: "move " + i + " is illegal" };
       }
       board = res.board;
       pointers = res.pointers;
       score += res.scoreGained;
+      progress += gain(res);
       steps.push({ move: mv, scoreGained: res.scoreGained, cascades: res.cascades,
-                   specialCreated: res.specialCreated, specialFired: res.specialFired });
-      if (score >= level.target) {
-        return { win: true, valid: true, score: score, movesUsed: i + 1,
+                   specialCreated: res.specialCreated, specialFired: res.specialFired,
+                   collected: res.collected });
+      if (progress >= goal) {
+        return { win: true, valid: true, score: score, progress: progress, movesUsed: i + 1,
                  sequence: sequence.slice(0, i + 1), board: board, steps: steps };
       }
     }
-    return { win: score >= level.target, valid: true, score: score,
+    return { win: progress >= goal, valid: true, score: score, progress: progress,
              movesUsed: sequence.length, sequence: sequence.slice(), board: board,
              steps: steps };
   }
 
-  // Trim a max-score line to its winning prefix (first move crossing target).
-  function trimToTarget(level, sequence) {
-    var rep = replaySequence(level, sequence);
+  // Trim a max-progress line to its winning prefix (first move crossing goal).
+  function trimToTarget(level, sequence, objective) {
+    var rep = replaySequence(level, sequence, objective);
     return rep.win ? rep.sequence : null;
   }
 
@@ -191,27 +252,34 @@
   // A myopic player: each move takes the highest-immediate-score legal,
   // NON-special swap (ties -> earliest in row-major move order). No lookahead.
   // Deterministic. Returns { win, sequence, score }.
-  function greedy(level) {
+  // Greedy is measured in the SAME currency as the objective: on a collect
+  // Depth the myopic player grabs the swap that clears the most of the wanted
+  // colour, not the highest-scoring one. (Grading greedy on score while the win
+  // condition was collect would mis-tier every collect level.)
+  function greedy(level, objective) {
+    objective = objective || objectiveOf(level);
+    var gain = progressFn(objective);
+    var goal = objective.amount;
     var board = logic.cloneBoard(level.board);
     var pointers = startPointers(level);
-    var seq = [], score = 0;
+    var seq = [], score = 0, progress = 0;
     for (var m = 0; m < level.moves; m++) {
-      if (score >= level.target) return { win: true, sequence: seq, score: score };
+      if (progress >= goal) return { win: true, sequence: seq, score: score, progress: progress };
       var moves = logic.legalMoves(board, level.refill, pointers, { noSpecial: true });
-      var best = null;
+      var best = null, bestGain = -1;
       for (var i = 0; i < moves.length; i++) {
-        if (best === null || moves[i].res.scoreGained > best.res.scoreGained) {
-          best = moves[i];
-        }
+        var g = gain(moves[i].res);
+        if (best === null || g > bestGain) { best = moves[i]; bestGain = g; }
       }
       if (best === null) break; // stuck: no non-special legal move
       board = best.res.board;
       pointers = best.res.pointers;
       score += best.res.scoreGained;
+      progress += bestGain;
       seq.push(best.move);
-      if (score >= level.target) return { win: true, sequence: seq, score: score };
+      if (progress >= goal) return { win: true, sequence: seq, score: score, progress: progress };
     }
-    return { win: score >= level.target, sequence: seq, score: score };
+    return { win: progress >= goal, sequence: seq, score: score, progress: progress };
   }
 
   // ------------------------------------------------------------- solve --
@@ -221,11 +289,12 @@
   // returns { win, sequence, score, overflow }.
   function solve(level, opts) {
     opts = opts || {};
+    var objective = opts.objective || objectiveOf(level);
     var r = canReach(level, { allowSpecials: opts.allowSpecials !== false,
-                              nodeCap: opts.nodeCap });
-    var seq = r.win ? trimToTarget(level, r.sequence) : null;
+                              nodeCap: opts.nodeCap, objective: objective });
+    var seq = r.win ? trimToTarget(level, r.sequence, objective) : null;
     if (r.win && opts.checkAgainstTruth !== false) {
-      var rep = replaySequence(level, seq);
+      var rep = replaySequence(level, seq, objective);
       if (!rep.win) {
         throw new Error("SOLVER UNSOUND: certified sequence does not reach target");
       }
@@ -245,42 +314,45 @@
     opts = opts || {};
     var nodeCap = opts.nodeCap || DEFAULT_NODE_CAP;
     var check = opts.checkAgainstTruth !== false;
+    var objective = opts.objective || objectiveOf(level);
 
     // easy — greedy wins.
-    var g = greedy(level);
+    var g = greedy(level, objective);
     if (g.win) {
-      var seqE = trimToTarget(level, g.sequence);
-      certify(level, seqE, check);
+      var seqE = trimToTarget(level, g.sequence, objective);
+      certify(level, seqE, check, objective);
       return { tier: "easy", sequence: seqE, greedy: g };
     }
 
     // medium — greedy failed; a no-special line reaches target (short-circuit).
-    var sn = canReach(level, { allowSpecials: false, nodeCap: nodeCap });
+    var sn = canReach(level, { allowSpecials: false, nodeCap: nodeCap, objective: objective });
     if (sn.win) {
-      var seqM = trimToTarget(level, sn.sequence);
-      certify(level, seqM, check);
+      var seqM = trimToTarget(level, sn.sequence, objective);
+      certify(level, seqM, check, objective);
       return { tier: "medium", sequence: seqM, greedy: g, nospec: sn };
     }
     // The no-special search failed. Trust "no" only if it was EXHAUSTIVE.
     if (sn.overflow) return { tier: "overflow", greedy: g, nospec: sn };
 
     // hard — no-special provably fails; a special-using line reaches target.
-    var sf = canReach(level, { allowSpecials: true, nodeCap: nodeCap });
+    var sf = canReach(level, { allowSpecials: true, nodeCap: nodeCap, objective: objective });
     if (sf.win) {
-      var seqH = trimToTarget(level, sf.sequence);
-      certify(level, seqH, check);
+      var seqH = trimToTarget(level, sf.sequence, objective);
+      certify(level, seqH, check, objective);
       return { tier: "hard", sequence: seqH, greedy: g, nospec: sn, full: sf };
     }
     if (sf.overflow) return { tier: "overflow", greedy: g, nospec: sn, full: sf };
     return { tier: "unwinnable", greedy: g, nospec: sn, full: sf };
   }
 
-  function certify(level, sequence, check) {
+  function certify(level, sequence, check, objective) {
     if (!check) return;
-    var rep = replaySequence(level, sequence);
+    objective = objective || objectiveOf(level);
+    var rep = replaySequence(level, sequence, objective);
     if (!rep.win) {
       throw new Error("SOLVER UNSOUND: certified " + JSON.stringify(sequence) +
-        " does not reach target (" + rep.score + "/" + level.target + ")");
+        " does not meet objective [" + objectiveLabel(objective) + "] (" +
+        rep.progress + "/" + objective.amount + ")");
     }
   }
 
@@ -295,6 +367,10 @@
   return {
     DEFAULT_NODE_CAP: DEFAULT_NODE_CAP,
     search: search,
+    objectiveOf: objectiveOf,
+    progressFn: progressFn,
+    objectiveLabel: objectiveLabel,
+    bestProgress: bestProgress,
     bestScore: bestScore,
     canReach: canReach,
     solve: solve,

@@ -11,6 +11,8 @@
  *        Depths  1- 8 : easy   (6x6, 4 colors, 5 moves)
  *        Depths  9-16 : medium (7x7, 5 colors, 6 moves)
  *        Depths 17-24 : hard   (7x8, 6 colors, 5 moves)
+ *        Depths 25+   : a repeating 10-Depth wave, E M H M H E M H M H
+ *                       (see tierForDepth) — 2 easy / 4 medium / 4 hard per ten
  *      generate() already certifies the tier internally (greedy fails / no-special
  *      search fails, etc.) and re-verifies its winning line by replay.
  *   2. RE-verifies every Depth with solver.analyze() and asserts the certified
@@ -34,8 +36,10 @@
  *   overflows, M is a safe LOWER bound on the true max — still achievable.)
  *
  * REGENERATE / EXTEND
- *   node scripts/build-levels.js                 # rebuild all 24 Depths
- *   node scripts/build-levels.js --count 30      # extend the campaign length
+ *   node scripts/build-levels.js --count 250 --from 101   # EXTEND (keeps 1-100)
+ *   node scripts/build-levels.js --count 250              # full rebuild — see the
+ *                                                         # freeze warning below
+ *   node scripts/build-levels.js                 # defaults to 40 Depths
  *   Deterministic: Depth N always uses seed N within its tier band, so a rebuild
  *   reproduces the same campaign. To change the ramp, edit tierForDepth() below.
  */
@@ -54,17 +58,50 @@ function argVal(flag, dflt) {
   return (i >= 0 && argv[i + 1]) ? argv[i + 1] : dflt;
 }
 var TOTAL = parseInt(argVal("--count", "40"), 10);
+// --from N  : EXTEND mode. Depths below N are carried over verbatim from the
+//             existing js/levels.js (objectives and all) and only N..TOTAL are
+//             generated. This is how the campaign grows without re-grading — and
+//             without silently regenerating shipped Depths, which is a mistake
+//             this file's header exists to warn about.
+// --out PATH: write somewhere other than js/levels.js, so a long extension run
+//             can proceed while another script edits the live campaign.
+var FROM = parseInt(argVal("--from", "1"), 10);
+var OUT = argVal("--out", "");
 
 // Depth -> tier band.
 // Depths 1-24 are the ORIGINAL campaign and their structure is FROZEN (equal
-// thirds of 24) so rebuilds reproduce them byte-identically for shipped players.
-// Depths 25+ extend in waves like the big match-3 games: one medium "breather"
-// then three hard, repeating (25 M, 26-28 H, 29 M, 30-32 H, ...).
+// thirds of 24).
+//
+// !! The "a rebuild reproduces them byte-identically" claim this comment used to
+// make is NO LONGER TRUE, and hasn't been since Phase 3. The boards and refill
+// queues do still reproduce exactly (same seed, same tier, same budget), but the
+// shipped Depths 1-24 were CERTIFIED under the pre-urchin ruleset; today's solver
+// re-grades them with urchins + special-combos available and arrives at a
+// different certTarget — which then moves target and both star bars. Measured on
+// 2026-07-27: 23 of the 24 shifted, generally EASIER (Depth 12 star3 9180 ->
+// 5040, Depth 24 target 15000 -> 12480).
+//
+// So a plain rebuild silently rebalances shipped levels out from under existing
+// players. js/levels.js therefore carries the shipped 1-24 spliced in verbatim.
+// If you rebuild the whole campaign, restore Depths 1-24 from the previous
+// js/levels.js afterwards — or decide deliberately to adopt the Phase-3 regrade
+// for them, which is a balance change worth making on purpose, not by accident.
+//
+// Depths 25+ ride a repeating 10-Depth WAVE. The old extension (one medium
+// breather then three hard) graded out at 65 hard / 27 medium / 8 easy across
+// 100 Depths — effectively a flat wall from 25 on, which is the shape players
+// quit on. The wave gives every ten Depths a real rhythm: two easy exhales,
+// four mediums, four hards, and never two hards back to back within a block.
+//
+//   offset in block: 0  1  2  3  4  5  6  7  8  9
+//   tier:            E  M  H  M  H  E  M  H  M  H
+var WAVE = ["easy", "medium", "hard", "medium", "hard",
+            "easy", "medium", "hard", "medium", "hard"];
 function tierForDepth(depth) {
   if (depth <= 8) return "easy";
   if (depth <= 16) return "medium";
   if (depth <= 24) return "hard";
-  return ((depth - 25) % 4 === 0) ? "medium" : "hard";
+  return WAVE[(depth - 25) % WAVE.length];
 }
 
 // Star max search: bounded so the build stays quick. The returned score is a
@@ -80,13 +117,18 @@ function round60(x) { return Math.round(x / 60) * 60; }
 // up as you descend: gentle at Depth 1, full-challenge by the last Depth. Because
 // winTarget <= certified target <= an exhibited achievable line, every Depth stays
 // provably winnable; the certification (tier grading) still uses the certified target.
-function winTargetFor(certTarget, depth) {
+function winTargetFor(certTarget, depth, tier) {
   // FROZEN ramp: 0.35 at Depth 1 -> 1.0 at Depth 24, anchored to 24 forever so
-  // extending the campaign never changes shipped targets. Depths 25+ cap at 0.9
-  // of the certified score. (A softer 0.85/0.80 cap was prototyped and PAUSED
-  // at Ruta's request 2026-07-20 — revisit if the deep game still feels too
-  // demanding once combo play settles in.)
-  var f = (depth > 24) ? 0.9 : (0.35 + 0.65 * (depth - 1) / 23);
+  // extending the campaign never changes shipped targets.
+  //
+  // Depths 25+ scale the demand to the WAVE tier, so a breather actually
+  // breathes: an easy Depth at 0.9 of its certified line is not a rest, it is a
+  // hard level on a small board. (A softer 0.85/0.80 cap for hard was prototyped
+  // and PAUSED at Ruta's request 2026-07-20 — hard stays at 0.9 here; the relief
+  // now comes from the tier mix instead.)
+  var DEEP_FACTOR = { easy: 0.60, medium: 0.80, hard: 0.90 };
+  var f = (depth > 24) ? (DEEP_FACTOR[tier] || 0.9)
+                       : (0.35 + 0.65 * (depth - 1) / 23);
   var wt = round60(certTarget * f);
   if (wt < 60) wt = 60;
   if (wt > certTarget) wt = certTarget;
@@ -121,10 +163,24 @@ function starThresholds(level, winTarget) {
 function build() {
   var levels = [];
   var t0 = Date.now();
-  console.log("Building Tide Pool campaign — " + TOTAL + " Depths");
+
+  if (FROM > 1) {
+    global.window = {};
+    require(path.join(__dirname, "..", "js", "levels.js"));
+    var existing = global.window.CANDY_LEVELS || [];
+    if (existing.length < FROM - 1) {
+      throw new Error("--from " + FROM + " needs at least " + (FROM - 1) +
+        " existing Depths, found " + existing.length);
+    }
+    levels = existing.slice(0, FROM - 1);
+    console.log("Extending the campaign: keeping Depths 1-" + (FROM - 1) +
+      " verbatim, generating " + FROM + "-" + TOTAL);
+  } else {
+    console.log("Building Tide Pool campaign — " + TOTAL + " Depths");
+  }
   console.log(new Array(52).join("="));
 
-  for (var depth = 1; depth <= TOTAL; depth++) {
+  for (var depth = FROM; depth <= TOTAL; depth++) {
     var tier = tierForDepth(depth, TOTAL);
     var seed = depth; // deterministic per Depth within the tier band
     var d0 = Date.now();
@@ -140,8 +196,13 @@ function build() {
     else if (depth >= 19 && depth <= 20) moveBonus += 2;
     else if (depth >= 21 && depth <= 24) moveBonus += 1;
     // Extension (25+): hard levels keep the post-rebalance 6-move budget
-    // (never back to 5); medium breathers use their normal 6.
-    if (depth >= 25 && tier === "hard") moveBonus += 1;
+    // (never back to 5); the easy/medium wave slots get a little air so the
+    // breather reads as a breather.
+    if (depth >= 25) {
+      if (tier === "hard") moveBonus += 1;
+      else if (tier === "medium") moveBonus += 1;
+      else moveBonus += 2;               // easy exhale
+    }
     var budget = generator.TIERS[tier].budget + moveBonus;
 
     var lvl = generator.generate(tier, seed, { budget: budget });
@@ -157,7 +218,7 @@ function build() {
       throw new Error("Depth " + depth + " winning line failed replay");
     }
 
-    var winTarget = winTargetFor(lvl.target, depth, TOTAL);
+    var winTarget = winTargetFor(lvl.target, depth, tier);
     var st = starThresholds(lvl, winTarget);
 
     levels.push({
@@ -196,7 +257,7 @@ function build() {
     " * Regenerate: node scripts/build-levels.js  (see that file's header). */\n";
   var body = "window.CANDY_LEVELS = " + JSON.stringify(levels) + ";\n";
 
-  var outPath = path.join(__dirname, "..", "js", "levels.js");
+  var outPath = OUT ? path.resolve(OUT) : path.join(__dirname, "..", "js", "levels.js");
   fs.writeFileSync(outPath, header + body);
 
   var byTier = { easy: 0, medium: 0, hard: 0 };

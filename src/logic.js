@@ -413,6 +413,11 @@
     var score = 0, cascades = 0, combo = 1;
     var specialCreated = false, specialFired = false;
     var first = true;
+    // Per-color tally of creatures cleared by this move (index = color, 1-based;
+    // slot 0 unused). This is what "collect" objectives are graded on, so it is
+    // always computed — never gated behind `trace` — and counts a creature once,
+    // at the moment it is actually removed from the grid.
+    var collected = [0, 0, 0, 0, 0, 0, 0];
 
     // MAX_CASCADES is a determinism guard: a pathological refill queue (e.g. a
     // column that keeps drawing the same color) could otherwise cascade forever.
@@ -455,6 +460,8 @@
         var cell = clearCells[ii];
         if (creationKey[key(cell.r, cell.c)]) continue;
         if (b.grid[cell.r][cell.c] !== null) {
+          var col = b.grid[cell.r][cell.c].color;
+          if (col >= 1 && col < collected.length) collected[col]++;
           b.grid[cell.r][cell.c] = null;
           clearedCount++;
           if (trace) clearedThisStep.push({ r: cell.r, c: cell.c });
@@ -486,7 +493,8 @@
 
     return {
       board: b, pointers: ptr, scoreGained: score, cascades: cascades,
-      specialCreated: specialCreated, specialFired: specialFired
+      specialCreated: specialCreated, specialFired: specialFired,
+      collected: collected
     };
   }
 
@@ -640,7 +648,8 @@
     return {
       legal: true, board: res.board, pointers: res.pointers,
       scoreGained: res.scoreGained, cascades: res.cascades,
-      specialCreated: res.specialCreated, specialFired: res.specialFired
+      specialCreated: res.specialCreated, specialFired: res.specialFired,
+      collected: res.collected
     };
   }
 

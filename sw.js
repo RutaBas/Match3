@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v23";   // v23: bump to purge stale cached style.css
+var CACHE_NAME = "tide-pool-v30";   // v30: album/rockpool icons moved off the title row
 
 var LOCAL_ASSETS = [
   "./",
@@ -10,11 +10,16 @@ var LOCAL_ASSETS = [
   "js/game.js",
   "js/sound.js",
   "js/economy.js",
+  "js/album.js",
+  "js/decor.js",
+  "js/endless.js",
+  "js/endless-worker.js",
   "js/levels.js",
   "js/hint-worker.js",
   "src/rng.js",
   "src/logic.js",
   "src/solver.js",
+  "src/transform.js",
   "src/generator.js",
   "manifest.webmanifest",
   "icons/icon-180.png",

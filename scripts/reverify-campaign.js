@@ -43,13 +43,19 @@ var fails = [], unproven = [], t0 = Date.now();
 
 for (var i = 0; i < levels.length; i++) {
   var L = levels[i];
-  var lvl = { board: L.board, refill: L.refill, moves: L.moves, target: L.target };
+  // Carry the objective through: a collect Depth is won by clearing N of a
+  // colour, so verifying it against `target` would check the wrong thing
+  // entirely (and would silently "pass" a Depth whose real goal is unreachable).
+  var lvl = { board: L.board, refill: L.refill, moves: L.moves, target: L.target,
+              objective: L.objective };
+  var objective = solver.objectiveOf(lvl);
+  var goalLabel = L.objective ? solver.objectiveLabel(objective) : ("score " + L.target);
   var d0 = Date.now();
-  var r = solver.canReach(lvl, { allowSpecials: true, target: L.target, nodeCap: NODE_CAP });
+  var r = solver.canReach(lvl, { allowSpecials: true, objective: objective, nodeCap: NODE_CAP });
   var verdict, extra = "";
   if (r.win) {
     // ground-truth: replay the witnessing line through the real rules.
-    var seq = solver.trimToTarget(lvl, r.sequence);
+    var seq = solver.trimToTarget(lvl, r.sequence, objective);
     if (seq) {
       verdict = "PASS";
       extra = "win in " + seq.length + " moves";
@@ -60,17 +66,17 @@ for (var i = 0; i < levels.length; i++) {
     }
   } else if (r.overflow) {
     verdict = "FAIL";
-    extra = "UNPROVEN (node cap hit; best found " + r.score + "/" + L.target + ")";
+    extra = "UNPROVEN (node cap hit; best found " + r.score + "/" + objective.amount + ")";
     unproven.push(L.depth);
   } else {
     verdict = "FAIL";
-    extra = "PROVEN unwinnable (exhaustive max " + r.score + " < " + L.target + ")";
+    extra = "PROVEN unwinnable (exhaustive max " + r.score + " < " + objective.amount + ")";
     fails.push(L.depth);
   }
   console.log(
     "Depth " + pad(L.depth, 2) + "  " + rpad(L.tier, 6) +
     " " + L.rows + "x" + L.cols + " mv" + pad(L.moves, 2) +
-    "  target " + pad(L.target, 6) +
+    "  " + rpad(goalLabel, 22) +
     "  " + rpad(verdict, 4) + "  " + extra +
     "  (" + (Date.now() - d0) + "ms)"
   );

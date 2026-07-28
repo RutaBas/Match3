@@ -55,6 +55,39 @@ b{ font-variant-numeric:tabular-nums; }
 @keyframes kelpsway{ 0%,100%{ transform:rotate(-3.5deg) skewX(-4deg);} 50%{ transform:rotate(3.5deg) skewX(4deg);} }
 .creature-bg{ position:absolute; opacity:.14; animation:drift 14s ease-in-out infinite; }
 @keyframes drift{ 0%,100%{ transform:translate(0,0) rotate(0);} 50%{ transform:translate(10px,-12px) rotate(8deg);} }
+/* ---- bought decor ----
+   Sits above the water and below the map, in the palette's own colours, so a
+   decorated pool reads as scenery rather than stickers dropped on the scene.
+   Pieces hang off the left and right edges to frame the trail, never over it. */
+.decor-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.decor{ position:absolute; }
+.decor svg{ width:100%; height:100%; display:block; }
+.decor.drift{ animation:decorDrift 18s ease-in-out infinite; }
+@keyframes decorDrift{ 0%,100%{ transform:translateX(0) translateY(0);}
+                       50%{ transform:translateX(14px) translateY(-10px);} }
+.decor-spark{ position:absolute; width:3px; height:3px; border-radius:50%;
+  background:var(--gold); box-shadow:0 0 6px var(--gold); opacity:.5;
+  animation:sparkFloat 9s ease-in-out infinite; }
+@keyframes sparkFloat{ 0%,100%{ transform:translateY(0); opacity:.15;}
+                       50%{ transform:translateY(-26px); opacity:.6;} }
+@media (prefers-reduced-motion:reduce){
+  .decor.drift{ animation:none; } .decor-spark{ animation:none; opacity:.4; }
+}
+
+/* Album and rockpool live on the zone row, flanking the zone pill.
+   They were first pinned top-left opposite the settings gear, which collided
+   with the centred title: the icon cluster ended at x=92 and "TIDE POOL" began
+   at x=91 on a 375px screen, and narrower phones were worse. The gear survives
+   up there because the title's right edge clears it. Sitting them either side
+   of the zone pill uses a row that was already there and already half empty, so
+   the fix costs no vertical space at all. */
+.maprow{ display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:0 var(--sp3); flex:0 0 auto; }
+.home-icon{ width:34px; height:34px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
+  background:rgba(23,41,42,.7); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
+  font-size:1rem; line-height:1; transition:transform .15s var(--ease-buoy); }
+.home-icon:active{ transform:scale(.92); }
+
 .seabed{ position:absolute; left:0; right:0; bottom:0; height:70px; z-index:1;
   background:linear-gradient(transparent, #14322c 40%, #163b32);
   border-radius:50% 50% 0 0 / 26px 26px 0 0; box-shadow:0 -2px 20px rgba(20,60,48,.6); pointer-events:none; }
@@ -95,8 +128,194 @@ b{ font-variant-numeric:tabular-nums; }
 .howto-link::before{ content:"?"; display:inline-flex; align-items:center; justify-content:center;
   width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 1.5px currentColor; font-size:.7rem; }
 
+/* ---- zone picker: jump straight to a stretch of the campaign ----
+   The trail is one long serpentine — at 250 Depths that is ~20,000px, so
+   scrolling back to an early Depth to chase a third star was a minute of
+   flicking.
+   This started as a horizontal strip of ten chips, which was the wrong shape for
+   a phone: ten chips cannot fit in 390px, so the row was clipped at both edges
+   with no cue that it scrolled, and it burned a whole band of vertical space
+   above the map. Now one pill names the zone you are in and opens a picker —
+   a single line of chrome, and every zone is one tap away instead of a
+   horizontal flick through a cut-off list. */
+.zone-pill[hidden]{ display:none; }   /* [hidden] loses to display:flex — see .objgoal */
+.zone-pill{ align-self:center; display:flex; align-items:center; gap:8px; margin:2px 0 2px;
+  border:0; cursor:pointer; padding:5px 12px; border-radius:99px; flex:0 0 auto;
+  background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:.78rem;
+  transition:transform .15s var(--ease-buoy); }
+.zone-pill:active{ transform:scale(.96); }
+.zone-pill .zp-stars{ font-family:'Nunito Sans',sans-serif; font-size:.68rem;
+  color:var(--gold); font-weight:700; }
+.zone-pill .zp-caret{ color:var(--sub); font-size:.7rem; }
+
+/* ---- first-dive coaching ----
+   Onboarding used to be a wall of text behind the settings gear, which is the
+   least likely place a new player looks and the least likely thing they read.
+   Instead the first dive teaches the one thing that matters by doing it: the
+   board dims, the only swap that works glows, and two taps later they have made
+   a match. No reading, and the manual stays available for anyone who wants it. */
+.coach{ display:flex; align-items:center; justify-content:center; gap:6px;
+  margin:0 var(--sp3) 4px; padding:7px 12px; border-radius:12px;
+  background:rgba(203,178,122,.14); box-shadow:inset 0 0 0 1px var(--gold);
+  color:var(--text); font-family:'Quicksand',sans-serif; font-weight:700; font-size:.8rem;
+  text-align:center; animation:coachIn .25s var(--ease-buoy); }
+.coach[hidden]{ display:none; }   /* [hidden] loses to display:flex — see .objgoal */
+@keyframes coachIn{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:none;} }
+
+/* dim everything except the pair being taught */
+.board.tutor .tile{ opacity:.28; transition:opacity .25s ease; }
+.board.tutor .tile.tut{ opacity:1; }
+.board.tutor .tile.tut .blob{ animation:tutPulse 1.25s ease-in-out infinite; }
+@keyframes tutPulse{ 0%,100%{ transform:scale(1); filter:brightness(1);}
+                     50%{ transform:scale(1.12); filter:brightness(1.45);} }
+@media (prefers-reduced-motion:reduce){
+  .board.tutor .tile.tut .blob{ animation:none; }
+  .coach{ animation:none; }
+}
+
+/* ---- Depth card (tapping a node on the map) ----
+   The map used to say only "cleared / not cleared". A player sitting on one star
+   had no way to learn what two or three would take without diving in blind, so
+   replaying — which is free content already sitting in the campaign — looked
+   pointless. The card names the goal, your best, and the exact star bars. */
+.depth-panel{ text-align:center; }
+.dp-head{ display:flex; flex-direction:column; gap:1px; margin-bottom:var(--sp2); }
+.dp-head b{ font-family:'Quicksand',sans-serif; font-size:1.05rem; color:var(--text); }
+.dp-zone{ font-size:.7rem; color:var(--sub); letter-spacing:.04em; text-transform:uppercase; }
+.dp-goal{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.92rem;
+  color:var(--aqua); margin-bottom:2px; display:flex; align-items:center;
+  justify-content:center; gap:6px; }
+.dp-goal .objmark{ width:1.05em; height:1.05em; }
+.dp-best{ font-size:.76rem; color:var(--sub); margin-bottom:var(--sp3); }
+.dp-best b{ color:var(--text); }
+.dp-stars[hidden]{ display:none; }   /* [hidden] loses to display:flex — see .objgoal */
+.dp-stars{ display:flex; flex-direction:column; gap:5px; margin-bottom:var(--sp3); }
+/* the same bars on the win/lose screens, a touch tighter */
+.end-stars{ width:100%; max-width:300px; margin:0 auto var(--sp3); }
+.end-stars .dp-star{ padding:5px 10px; font-size:.72rem; }
+/* how much more you need — the number that decides a retry */
+.dp-star .d{ margin-left:auto; font-family:'Quicksand',sans-serif; font-weight:700;
+  font-size:.72rem; color:var(--aqua); }
+.dp-star .d + .v{ margin-left:10px; color:var(--sub); font-weight:600; }
+.dp-star{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px;
+  background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px #2b4142;
+  font-family:'Nunito Sans',sans-serif; font-size:.76rem; color:var(--sub); }
+.dp-star .s{ color:#4d6b6b; letter-spacing:1px; font-size:.8rem; }
+.dp-star .v{ margin-left:auto; font-family:'Quicksand',sans-serif; font-weight:700; color:var(--text); }
+.dp-star.got{ background:rgba(203,178,122,.14); box-shadow:inset 0 0 0 1px var(--gold); }
+.dp-star.got .s{ color:var(--gold); }
+.dp-star.got .v{ color:var(--gold); }
+.dp-star.next{ box-shadow:inset 0 0 0 1px var(--aqua); }
+.dp-star.next .lbl{ color:var(--aqua); }
+.dp-locked{ font-size:.78rem; color:var(--sub); margin-bottom:var(--sp3); }
+
+/* ---- field album ---- */
+.album-panel,.shop-panel{ text-align:center; }
+.album-grid{ display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:var(--sp3);
+  max-height:46vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-right:2px; }
+.sp{ display:flex; gap:8px; align-items:flex-start; text-align:left; padding:8px;
+  border-radius:12px; background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px #2b4142; }
+.sp-ic{ font-size:1.3rem; line-height:1.1; flex:0 0 auto; }
+.sp-txt{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.sp-name{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.76rem; color:var(--text); }
+.sp-note{ font-size:.63rem; color:var(--sub); line-height:1.3; }
+.sp-at{ font-size:.6rem; color:var(--aqua); font-weight:700; }
+.sp.locked{ opacity:.5; }
+.sp.locked .sp-ic{ filter:grayscale(1) brightness(.6); }
+.sp.locked .sp-name{ color:var(--sub); }
+.sp.fresh{ box-shadow:inset 0 0 0 1px var(--gold), 0 0 12px rgba(203,178,122,.3); }
+
+/* the "new species" line on the win screen */
+.find[hidden]{ display:none; }   /* [hidden] loses to display:flex — see .objgoal */
+.find{ display:flex; align-items:center; gap:9px; width:100%; max-width:300px;
+  margin:0 auto var(--sp3); padding:8px 12px; border-radius:12px; text-align:left;
+  background:rgba(203,178,122,.13); box-shadow:inset 0 0 0 1px var(--gold); }
+.find-ic{ font-size:1.4rem; }
+.find-txt{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.find-txt b{ font-family:'Quicksand',sans-serif; font-size:.8rem; color:var(--gold); }
+.find-txt i{ font-style:normal; font-size:.66rem; color:var(--sub); line-height:1.3; }
+
+/* ---- rockpool shop ---- */
+.shop-bal{ display:inline-block; margin-left:4px; color:var(--gold); font-weight:700; }
+.shop-grid{ display:flex; flex-direction:column; gap:7px; margin-bottom:var(--sp3);
+  max-height:46vh; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-right:2px; }
+.shop-item{ display:flex; align-items:center; gap:10px; width:100%; border:0; cursor:pointer;
+  text-align:left; padding:9px 11px; border-radius:12px; color:var(--text);
+  background:rgba(255,255,255,.05); box-shadow:inset 0 0 0 1px #2b4142;
+  font-family:'Nunito Sans',sans-serif; transition:transform .15s var(--ease-buoy); }
+.shop-item:active{ transform:scale(.98); }
+.shop-swatch{ width:34px; height:34px; flex:0 0 auto; display:flex; align-items:center;
+  justify-content:center; }
+.shop-swatch svg{ width:100%; height:100%; }
+.shop-txt{ flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+.shop-name{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.8rem; }
+.shop-blurb{ font-size:.65rem; color:var(--sub); line-height:1.3; }
+.shop-cost{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.78rem;
+  color:var(--gold); flex:0 0 auto; }
+/* right-hand controls: a stepper for how many are out, and a separate buy chip
+   so a tap can never spend shells by accident */
+.shop-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto; }
+.qty{ display:flex; align-items:center; gap:2px; }
+.qbtn{ width:26px; height:26px; border:0; cursor:pointer; border-radius:8px;
+  background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:.9rem; line-height:1;
+  transition:transform .12s var(--ease-buoy); }
+.qbtn:active{ transform:scale(.9); }
+.qbtn:disabled{ opacity:.3; cursor:default; }
+.qn{ min-width:18px; text-align:center; font-family:'Quicksand',sans-serif;
+  font-weight:700; font-size:.82rem; color:var(--aqua); }
+.buybtn{ border:0; cursor:pointer; padding:4px 9px; border-radius:9px;
+  background:rgba(203,178,122,.16); box-shadow:inset 0 0 0 1px var(--gold);
+  color:var(--gold); font-family:'Quicksand',sans-serif; font-weight:700; font-size:.7rem;
+  white-space:nowrap; transition:transform .12s var(--ease-buoy); }
+.buybtn:active{ transform:scale(.94); }
+.buybtn.cant{ box-shadow:inset 0 0 0 1px #3a5250; color:var(--sub); background:rgba(255,255,255,.04); }
+.owncount{ color:var(--aqua); font-size:.72rem; }
+.buymax{ padding:4px 9px; border-radius:9px; color:var(--sub); white-space:nowrap;
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:.68rem;
+  box-shadow:inset 0 0 0 1px #2b4142; }
+.shop-item.owned{ box-shadow:inset 0 0 0 1px var(--aqua); }
+.shop-item.owned .shop-cost{ color:var(--aqua); }
+/* owned but taken out of the pool — clearly still yours, just not on display */
+.shop-item.stored{ box-shadow:inset 0 0 0 1px #3a5250; background:rgba(255,255,255,.03); }
+.shop-item.stored .shop-name{ color:var(--sub); }
+.shop-item.stored .shop-cost{ color:var(--aqua); opacity:.75; }
+.shop-item.cant .shop-cost{ color:var(--sub); }
+.shop-item.cant{ opacity:.6; }
+
+.zone-panel{ text-align:center; }
+.zone-grid{ display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:var(--sp3); }
+.zone{ border:0; cursor:pointer; padding:8px 6px 7px; border-radius:12px;
+  background:rgba(255,255,255,.06); box-shadow:inset 0 0 0 1px #2b4142; color:var(--sub);
+  font-family:'Nunito Sans',sans-serif; font-size:.6rem; font-weight:700;
+  display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.15;
+  transition:transform .15s var(--ease-buoy); }
+.zone:active{ transform:scale(.95); }
+.zone .zn{ font-family:'Quicksand',sans-serif; font-size:.76rem; color:var(--text); }
+.zone .zs{ font-size:.6rem; color:var(--sub); }
+.zone.cur{ background:rgba(203,178,122,.16); box-shadow:inset 0 0 0 2px var(--gold), 0 0 12px rgba(203,178,122,.35); }
+.zone.cur .zn{ color:var(--gold); }
+.zone.done{ background:rgba(91,182,166,.16); box-shadow:inset 0 0 0 1px var(--aqua); }
+.zone.done .zs{ color:var(--aqua); }
+.zone.locked{ opacity:.45; }
+
+/* "you are here" — appears only once you have scrolled away from your Depth */
+.here-btn{ position:absolute; left:50%; transform:translateX(-50%); bottom:10px; z-index:8;
+  border:0; cursor:pointer; padding:7px 14px; border-radius:99px;
+  background:rgba(23,41,42,.94); box-shadow:inset 0 0 0 1px var(--gold), 0 4px 14px rgba(0,0,0,.45);
+  color:var(--gold); font-family:'Quicksand',sans-serif; font-weight:700; font-size:.74rem;
+  animation:hereIn .22s var(--ease-buoy); }
+.here-btn b{ color:var(--text); }
+@keyframes hereIn{ from{ opacity:0; transform:translate(-50%,8px);} to{ opacity:1; transform:translate(-50%,0);} }
+
 .trail{ flex:1; overflow-y:auto; overflow-x:hidden; position:relative; margin-top:6px;
   -webkit-overflow-scrolling:touch; }
+/* Deliberately NOT scroll-behavior:smooth. Two reasons: a smooth scroll is
+   compositor-driven, so a scrollTop assignment silently does nothing when frames
+   are not being produced (this bit the Weekly Tide bar and the zone jump); and
+   easing across 8,000+ px is a multi-second disorienting glide. A jump control
+   should land, not travel. */
 /* Fade the descending trail into the deep at the bottom edge. An overlay
    element (not a CSS mask) is used deliberately: iOS Safari does not apply
    mask-image to a momentum-scrolling container, so the mask was invisible on
@@ -158,6 +377,22 @@ b{ font-variant-numeric:tabular-nums; }
 .pscore{ font-family:'Quicksand'; font-weight:700; font-size:.8rem; color:var(--text); min-width:74px; text-align:right; }
 .pscore span{ color:var(--sub); font-weight:600; }
 .pscore span b{ color:var(--gold); }
+/* collect Depths: the bar counts creatures, so it shows which kind */
+.progress.collect .pscore{ min-width:86px; }
+.objmark{ display:inline-block; width:1em; height:1em; vertical-align:-.16em; }
+.objmark svg{ width:100%; height:100%; display:block; }
+.tile .blob.collected{ animation:collectPop .34s var(--ease-buoy); }
+@keyframes collectPop{ 0%{ transform:scale(1);} 45%{ transform:scale(1.34); filter:brightness(1.5);} 100%{ transform:scale(1);} }
+/* the objective banner above the board */
+/* [hidden] alone loses to the display:flex below — without this the banner never
+   hides, and a score Depth (or a Daily/Weekly dive) keeps showing whatever the
+   last collect Depth asked for. Same trap as .thinking and .modal. */
+.objgoal[hidden]{ display:none; }
+.objgoal{ display:flex; align-items:center; justify-content:center; gap:6px;
+  font-family:'Quicksand',sans-serif; font-weight:700; font-size:.76rem; color:var(--sub);
+  padding:0 var(--sp3) 4px; }
+.objgoal .objmark{ width:1.15em; height:1.15em; }
+.objgoal b{ color:var(--text); }
 
 .board-wrap{ flex:1; position:relative; display:flex; align-items:center; justify-content:center;
   padding:var(--sp2) var(--sp3); min-height:0; }
@@ -255,23 +490,66 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .tile.pinched .blob{ animation:pinch .24s ease; }
 @keyframes pinch{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(.76) rotate(-7deg); } }
 
+/* Pre-existing bug, found by auditing every [hidden]-toggled element against the
+   rules that set display: #win-reward is hidden when a dive pays nothing (a
+   Daily Tide already claimed today, a Weekly slot already cleared), but
+   display:flex beat the attribute — so a replay showed the previous dive's
+   payout as though it had just been earned. */
+.reward[hidden]{ display:none; }
 .reward{ display:flex; flex-direction:column; align-items:center; gap:2px; margin:0 0 var(--sp3); }
 .reward-total{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.1rem; color:var(--gold); }
 .reward-detail{ font-size:.72rem; color:var(--sub); }
 
-/* ---- Daily Challenge card (home) ---- */
-.challenge-card{ display:flex; align-items:center; gap:10px; margin:10px auto 0; max-width:290px;
-  width:100%; border:0; cursor:pointer; text-align:left; padding:10px 14px; border-radius:14px;
+/* ---- mode tiles (home): Daily / Weekly / Trench ----
+   These were three stacked full-width cards, each with a one-line description.
+   Three rows of chrome pushed the map — the thing the screen is actually for —
+   past the halfway mark on a phone. One row of three tiles says the same thing:
+   the icon and name identify the mode, the badge carries the only genuinely
+   changing information (today's payout, 3/7 tides cleared, best rung). The
+   descriptions moved to the buttons' aria-labels, so nothing is lost to screen
+   readers. */
+.modes{ display:flex; gap:7px; margin:10px auto 0; max-width:320px; width:100%; }
+.mode{ flex:1 1 0; min-width:0; border:0; cursor:pointer; padding:7px 4px 6px; border-radius:13px;
   background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
-  font-family:'Nunito Sans',sans-serif; transition:transform .15s var(--ease-buoy); }
-.challenge-card:active{ transform:scale(.97); }
-.challenge-card .ch-ic{ font-size:1.3rem; }
-.challenge-card .ch-txt{ flex:1; display:flex; flex-direction:column; line-height:1.25; }
-.challenge-card .ch-txt b{ font-family:'Quicksand',sans-serif; font-size:.86rem; }
-.challenge-card .ch-txt i{ font-style:normal; font-size:.72rem; color:var(--sub); }
-.challenge-card .ch-reward{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.8rem; color:var(--gold); }
-.challenge-card.done{ opacity:.65; }
-.challenge-card.done .ch-reward{ color:var(--aqua); }
+  font-family:'Nunito Sans',sans-serif;
+  display:flex; flex-direction:column; align-items:center; gap:1px; line-height:1.2;
+  transition:transform .15s var(--ease-buoy); }
+.mode:active{ transform:scale(.95); }
+.mode .m-ic{ font-size:1.1rem; }
+.mode .m-name{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.76rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.mode .m-badge{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.66rem;
+  color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.mode.done{ opacity:.62; }
+.mode.done .m-badge{ color:var(--aqua); }
+.mode.busy .m-badge{ color:var(--sub); }
+
+/* ---- Weekly Tide card + modal ---- */
+#btn-weekly .m-badge{ color:var(--aqua); }
+#btn-weekly.complete .m-badge{ color:var(--gold); }
+.weekly-panel{ text-align:center; }
+.week-track{ display:flex; justify-content:center; gap:5px; margin-bottom:var(--sp3); }
+.week-slot{ flex:1 1 0; min-width:0; border:0; cursor:pointer; padding:7px 0 6px; border-radius:10px;
+  background:rgba(255,255,255,.06); box-shadow:inset 0 0 0 1px #2b4142; color:var(--sub);
+  font-family:'Nunito Sans',sans-serif; font-size:.55rem; font-weight:700; white-space:nowrap;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  transition:transform .15s var(--ease-buoy); }
+.week-slot:active{ transform:scale(.94); }
+.week-slot .wd{ letter-spacing:.04em; }
+.week-slot .wn{ font-family:'Quicksand',sans-serif; font-size:.74rem; color:var(--text); }
+.week-slot .wm{ font-size:.6rem; line-height:1; height:.7rem; }
+.week-slot.open{ background:rgba(91,182,166,.10); box-shadow:inset 0 0 0 1px var(--aqua); }
+.week-slot.today{ background:rgba(203,178,122,.16); box-shadow:inset 0 0 0 2px var(--gold), 0 0 12px rgba(203,178,122,.4); }
+.week-slot.today .wn{ color:var(--gold); }
+.week-slot.done{ background:rgba(91,182,166,.20); box-shadow:inset 0 0 0 1px var(--aqua); }
+.week-slot.done .wn{ color:var(--aqua); }
+.week-slot.locked{ opacity:.42; cursor:default; }
+.week-foot{ margin-bottom:var(--sp3); }
+.week-progress{ height:10px; border-radius:99px; background:rgba(255,255,255,.1); overflow:hidden; margin-bottom:6px; }
+.week-progress i{ display:block; height:100%; width:0; border-radius:99px;
+  background:linear-gradient(90deg,var(--aqua),var(--gold)); transition:width .6s var(--ease-buoy); }
+.week-label{ font-size:.76rem; color:var(--sub); }
+.week-label b{ color:var(--text); }
 
 /* ---- Daily Dive chest modal ---- */
 .chest-panel{ text-align:center; }
