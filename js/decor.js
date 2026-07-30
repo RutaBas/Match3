@@ -81,7 +81,7 @@
   // depth: paint order (lower is further back).
   var CATALOG = [
     {
-      id: "anemones", name: "Anemone Bed", cost: 80, side: "left", depth: 2,
+      id: "anemones", name: "Anemone Bed", cost: 80, side: "left", depth: 1,
       blurb: "A cluster of beadlets, open and swaying.",
       svg: '<svg viewBox="0 0 90 60" preserveAspectRatio="none">' +
         '<g fill="currentColor">' +
@@ -93,12 +93,19 @@
         '<path d="M72 45 V34"/><path d="M65 46 L60 37"/><path d="M79 46 L84 37"/>' +
         "</g></g></svg>",
       w: 90, h: 60, color: "#c98f9a", opacity: 0.5,
-      slots: [ { side: "left",  x: 2,  bottom: 42, scale: 1 },
-               { side: "right", x: 4,  bottom: 30, scale: 0.78, flip: true },
-               { side: "left",  x: 26, bottom: 16, scale: 0.62 } ]
+      // Anemones are SESSILE — they cement a foot to rock and stay there for
+      // life, so every copy has to meet the floor. An earlier pass spread them
+      // up to 126px to declutter the sand and left two of them hanging in open
+      // water, which is a thing an anemone cannot do.
+      // Depth instead comes from the ground plane: the seabed band is 70px, so
+      // a copy sitting a little higher AND smaller AND fainter reads as further
+      // back along the sand rather than floating above it.
+      slots: [ { side: "left",   x: 6,   bottom: 10, scale: 1 },
+               { side: "right",  x: 7,   bottom: 38, scale: 0.7, flip: true },
+               { side: "center", x: -38, bottom: 72, scale: 0.5 } ]
     },
     {
-      id: "coral", name: "Coral Fan", cost: 120, side: "right", depth: 2,
+      id: "coral", name: "Coral Fan", cost: 120, side: "right", depth: 1,
       blurb: "Slow-grown, older than anyone who has seen it.",
       svg: '<svg viewBox="0 0 80 96" preserveAspectRatio="none">' +
         '<g stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round">' +
@@ -107,61 +114,98 @@
         '<path d="M20 30 L14 18"/><path d="M20 30 L26 16"/><path d="M60 30 L54 16"/><path d="M60 30 L66 18"/>' +
         '<path d="M40 60 V34"/><path d="M40 40 L34 28"/><path d="M40 40 L46 28"/>' +
         "</g></svg>",
-      w: 80, h: 96, color: "#d08a6a", opacity: 0.42,
-      slots: [ { side: "right", x: 3,  bottom: 40, scale: 1 },
-               { side: "left",  x: 1,  bottom: 58, scale: 0.72, flip: true },
-               { side: "right", x: 24, bottom: 24, scale: 0.55 } ]
+      w: 80, h: 96, color: "#c08466", opacity: 0.38,
+      // The first fan used to sit at the very right edge, jammed against the
+      // outermost kelp. Kelp occupies roughly 1%, 9% and 22% in from each side,
+      // so 15% drops the fan into the gap between the second and third strands
+      // instead of on top of them.
+      // Coral is a colony cemented to the substrate — same rule as the anemones,
+      // so all three fans keep their base on the sand and recede by size.
+      slots: [ { side: "right",  x: 14, bottom: 18, scale: 0.85 },
+               { side: "left",   x: 19, bottom: 48, scale: 0.6, flip: true },
+               { side: "center", x: 44, bottom: 82, scale: 0.46 } ]
     },
     {
-      id: "kelpgrove", name: "Kelp Grove", cost: 150, side: "left", depth: 1,
-      blurb: "Three more strands, taller than the rest.",
+      id: "kelpgrove", name: "Kelp Grove", cost: 150, side: "left", depth: 3,
+      blurb: "Three more strands, taller than the rest. Up to six groves.",
       svg: '<svg viewBox="0 0 60 240" preserveAspectRatio="none"><g fill="currentColor">' +
         '<path d="M12 240 C2 190 20 150 8 110 C0 76 16 54 12 8 C20 56 26 90 14 122 C26 158 6 196 12 240Z"/>' +
         '<path d="M32 240 C24 200 40 168 30 132 C22 104 36 84 32 46 C40 88 44 112 34 140 C44 172 26 208 32 240Z" opacity=".8"/>' +
         '<path d="M50 240 C44 206 56 180 48 152 C42 130 52 114 50 86 C56 118 59 136 51 158 C59 182 46 214 50 240Z" opacity=".6"/>' +
         "</g></svg>",
-      w: 60, h: 240, color: "#2f6b5e", opacity: 0.55,
-      slots: [ { side: "left",  x: 12, bottom: 0, scale: 1 },
-               { side: "right", x: 9,  bottom: 0, scale: 0.85, flip: true },
-               { side: "left",  x: 33, bottom: 0, scale: 0.66 } ]
+      // Kelp gets six slots rather than three: it is the one piece that reads as
+      // a backdrop instead of an object, so a whole fringe of it looks right
+      // where six of anything else would look like clutter. All six hug the left
+      // and right edges and vary in height, so they frame the trail rather than
+      // growing through it.
+      // Rooted low like the default fringe. These were briefly raised to ~75px
+      // to keep them clear of the sand; unnecessary once the sand stopped
+      // painting over the kelp, and low is where they look right.
+      w: 60, h: 240, color: "#2f6b5e", opacity: 0.62,
+      slots: [ { side: "left",  x: 12, bottom: -2, scale: 1 },
+               { side: "right", x: 9,  bottom: 0,  scale: 0.85, flip: true },
+               { side: "left",  x: 24, bottom: -5, scale: 0.66 },
+               { side: "right", x: 22, bottom: -3, scale: 0.74, flip: true },
+               { side: "left",  x: 1,  bottom: 2,  scale: 0.58 },
+               { side: "right", x: 1,  bottom: -6, scale: 0.62, flip: true } ]
     },
     {
-      id: "starfish", name: "Starfish Pair", cost: 100, side: "right", depth: 3,
+      id: "starfish", name: "Starfish Pair", cost: 100, side: "right", depth: 2,
       blurb: "Both mid-way through regrowing an arm.",
-      svg: '<svg viewBox="0 0 96 52" preserveAspectRatio="none"><g fill="currentColor">' +
+      // Two fixes for "looks very 2D next to the moving kelp": it now has a
+      // lighter inner star offset from the outline, which gives the arms some
+      // roll instead of reading as a flat cut-out; and it SWAYS — a slow lean
+      // against the current, the way something clamped to a rock actually moves.
+      // Everything else in the pool was breathing and only this sat perfectly
+      // still, which is what made it look pasted on.
+      svg: '<svg viewBox="0 0 96 52"><g fill="currentColor">' +
         '<path d="M26 6 L32 22 L49 23 L36 33 L41 50 L26 40 L11 50 L16 33 L3 23 L20 22 Z"/>' +
+        '<path d="M26 13 L30 23.5 L40 24 L32 30.5 L35 42 L26 35.5 L17 42 L20 30.5 L12 24 L22 23.5 Z" ' +
+          'fill="#ffffff" opacity=".22"/>' +
         '<path d="M72 20 L76 32 L89 33 L79 40 L83 52 L72 45 L61 52 L65 40 L55 33 L68 32 Z" opacity=".72"/>' +
+        '<path d="M72 25 L75 32.5 L83 33 L77 37.5 L79 46 L72 41.5 L65 46 L67 37.5 L61 33 L69 32.5 Z" ' +
+          'fill="#ffffff" opacity=".16"/>' +
         "</g></svg>",
-      w: 96, h: 52, color: "#cbb27a", opacity: 0.45,
-      slots: [ { side: "right", x: 8,  bottom: 20, scale: 1 },
-               { side: "left",  x: 14, bottom: 8,  scale: 0.8, flip: true },
-               { side: "right", x: 34, bottom: 34, scale: 0.6 } ]
+      w: 96, h: 52, color: "#cbb27a", opacity: 0.5, motion: "sway",
+      // A starfish crawls, but it crawls ON something — with no rock face drawn
+      // above the seabed, a starfish at 214px was floating just as plainly as
+      // the anemones were. All three stay on the sand.
+      slots: [ { side: "right",  x: 3,  bottom: 28, scale: 0.92 },
+               { side: "left",   x: 2,  bottom: 56, scale: 0.7, flip: true },
+               { side: "center", x: -6, bottom: 86, scale: 0.52 } ]
     },
     {
-      id: "driftwood", name: "Driftwood", cost: 90, side: "left", depth: 3,
+      id: "driftwood", name: "Driftwood", cost: 90, side: "left", depth: 2,
       blurb: "Came from a forest. Ended up here.",
       svg: '<svg viewBox="0 0 130 34" preserveAspectRatio="none"><g fill="currentColor">' +
         '<path d="M4 22 C30 12 60 26 92 16 C108 11 122 14 128 20 C120 26 106 24 92 26 C60 34 30 24 4 28 Z"/>' +
         '<path d="M40 20 L34 8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
         "</g></svg>",
-      w: 130, h: 34, color: "#6b5540", opacity: 0.5,
-      slots: [ { side: "left",  x: 0,  bottom: 14, scale: 1 },
-               { side: "right", x: 2,  bottom: 4,  scale: 0.75, flip: true },
-               { side: "left",  x: 30, bottom: 30, scale: 0.55 } ]
+      // Was #6b5540 at 0.5 opacity — a dark brown at half strength against a
+      // dark teal floor, which is why it read as nothing. Lighter, warmer and
+      // far more opaque; driftwood is meant to be the one hard-edged object down
+      // there, so it should actually catch the eye.
+      w: 140, h: 37, color: "#a8825c", opacity: 0.78,
+      // driftwood is the one thing that belongs ON the sand, so it stays low
+      slots: [ { side: "left",   x: 0,  bottom: 2,  scale: 0.92 },
+               { side: "right",  x: 1,  bottom: 26, scale: 0.72, flip: true },
+               { side: "center", x: 22, bottom: 60, scale: 0.55 } ]
     },
     {
       id: "shoal", name: "Passing Shoal", cost: 180, side: "right", depth: 4,
-      blurb: "They drift through and never quite leave.",
-      svg: '<svg viewBox="0 0 120 70" preserveAspectRatio="none"><g fill="currentColor">' +
-        '<path d="M10 14 l12 5 -12 5 3 -5z"/><path d="M34 6 l12 5 -12 5 3 -5z"/>' +
-        '<path d="M56 20 l12 5 -12 5 3 -5z"/><path d="M28 30 l12 5 -12 5 3 -5z"/>' +
-        '<path d="M74 38 l12 5 -12 5 3 -5z"/><path d="M48 46 l12 5 -12 5 3 -5z"/>' +
-        '<path d="M88 12 l12 5 -12 5 3 -5z"/><path d="M18 54 l12 5 -12 5 3 -5z"/>' +
-        "</g></svg>",
-      w: 120, h: 70, color: "#7fd4c1", opacity: 0.34, drift: true,
-      slots: [ { side: "right", x: 2,  bottom: 150, scale: 1 },
-               { side: "left",  x: 3,  bottom: 250, scale: 0.75, flip: true },
-               { side: "right", x: 30, bottom: 330, scale: 0.55 } ]
+      blurb: "Little fish, always on their way somewhere else.",
+      // Four fish per cluster, not eight: with five clusters available that is
+      // still up to twenty fish, and a loose group of four reads as a shoal
+      // where eight crammed into one box read as a shape.
+      // `facing` tells the renderer this art has a front, so it is mirrored to
+      // match its direction of travel instead of following slot.flip.
+      svg: '<svg viewBox="0 0 96 44"><g fill="currentColor"><g transform="translate(12,14) scale(1)"><ellipse cx="8" cy="0" rx="8" ry="3.6"/><path d="M1 0 L-6.5 -4.6 L-4.4 0 L-6.5 4.6 Z"/></g><g transform="translate(44,7) scale(0.85)"><ellipse cx="8" cy="0" rx="8" ry="3.6"/><path d="M1 0 L-6.5 -4.6 L-4.4 0 L-6.5 4.6 Z"/></g><g transform="translate(38,30) scale(0.92)"><ellipse cx="8" cy="0" rx="8" ry="3.6"/><path d="M1 0 L-6.5 -4.6 L-4.4 0 L-6.5 4.6 Z"/></g><g transform="translate(72,22) scale(0.72)"><ellipse cx="8" cy="0" rx="8" ry="3.6"/><path d="M1 0 L-6.5 -4.6 L-4.4 0 L-6.5 4.6 Z"/></g></g></svg>',
+      w: 104, h: 48, color: "#8fdcc8", opacity: 0.42, motion: "swim", facing: true,
+      slots: [ { side: "right", x: 2,  bottom: 178, scale: 1 },
+               { side: "left",  x: 3,  bottom: 268, scale: 0.8 },
+               { side: "right", x: 4,  bottom: 348, scale: 0.66 },
+               { side: "left",  x: 2,  bottom: 132, scale: 0.72 },
+               { side: "right", x: 3,  bottom: 420, scale: 0.58 } ]
     },
     {
       id: "jelly", name: "Jelly Drift", cost: 200, side: "left", depth: 4,
@@ -172,7 +216,11 @@
         '<path d="M18 44 C16 60 22 70 18 88"/><path d="M28 44 C26 62 32 74 28 92"/>' +
         '<path d="M42 44 C44 62 38 74 42 92"/><path d="M52 44 C54 60 48 70 52 88"/>' +
         "</g></g></svg>",
-      w: 70, h: 96, color: "#9fb8e0", opacity: 0.4, drift: true,
+      // jellies ROAM — a long, wandering path across the pool rather than the
+      // shoal's small sway. They pass behind the map, which is why the layer
+      // sits under the content: a jelly crossing behind the trail looks like
+      // water, while one crossing over it would look like a bug.
+      w: 70, h: 96, color: "#9fb8e0", opacity: 0.4, motion: "roam",
       slots: [ { side: "left",  x: 4,  bottom: 210, scale: 1 },
                { side: "right", x: 8,  bottom: 300, scale: 0.72, flip: true },
                { side: "left",  x: 32, bottom: 380, scale: 0.55 } ]
@@ -181,8 +229,11 @@
       id: "plankton", name: "Glow Plankton", cost: 220, side: "full", depth: 5,
       blurb: "The pool lights up where you disturb it.",
       svg: "",
+      // Five, not three: plankton is the only piece with no silhouette at all,
+      // so extra copies just deepen the glow rather than adding another object
+      // to look at. Each copy is another 14 motes.
       w: 0, h: 0, color: "#cbb27a", opacity: 1, sparkle: true,
-      slots: [ { scale: 1 }, { scale: 1 }, { scale: 1 } ]
+      slots: [ { scale: 1 }, { scale: 1 }, { scale: 1 }, { scale: 1 }, { scale: 1 } ]
     }
   ];
 

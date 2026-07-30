@@ -1733,21 +1733,60 @@
       if (!slots.length) return;
       if (item.sparkle) { renderPlankton(layer, slots.length); return; }
       slots.forEach(function (slot, i) {
+        // Anything that travels leaves the pool on the side it is pinned to, so
+        // a right-edge piece heads left ("inward") and a left-edge piece heads
+        // right. `swim` crosses the whole pool; `roam` wanders out and back.
+        var goesLeft = slot.side === "right";
         var d = document.createElement("div");
-        d.className = "decor" + (item.drift ? " drift" : "");
+        d.className = "decor" + (item.motion ? " " + item.motion : "") +
+                      ((item.motion === "roam" || item.motion === "swim") && goesLeft
+                        ? " inward" : "");
         d.style.color = item.color;
-        // later copies sit a little further back, so a stack of three reads as
-        // depth rather than as three identical cut-outs
-        d.style.opacity = item.opacity * (1 - i * 0.14);
         d.style.width = Math.round(item.w * slot.scale) + "px";
         d.style.height = Math.round(item.h * slot.scale) + "px";
         d.style.bottom = slot.bottom + "px";
         d.style.zIndex = item.depth;
-        if (slot.side === "right") d.style.right = slot.x + "%";
-        else d.style.left = slot.x + "%";
-        if (slot.flip) d.style.transform = "scaleX(-1)";
-        if (item.drift) d.style.animationDelay = (i * 2.6) + "s";
-        d.innerHTML = item.svg;
+        // side "center" places a piece relative to the middle of the pool, with
+        // slot.x as a pixel nudge either way. Centring is done with marginLeft
+        // rather than translateX(-50%) on purpose: a CSS animation owns the
+        // transform of the element it animates, so a transform-based centring
+        // would be thrown away the moment the piece started moving.
+        if (slot.side === "center") {
+          d.style.left = "50%";
+          d.style.marginLeft = Math.round(slot.x - (item.w * slot.scale) / 2) + "px";
+        } else if (slot.side === "right") {
+          d.style.right = slot.x + "%";
+        } else {
+          d.style.left = slot.x + "%";
+        }
+        if (item.motion) {
+          // Stagger copies so a group never moves in lockstep, and vary the
+          // period so they fall out of phase over time instead of pulsing
+          // together. Negative delay starts each copy mid-path.
+          var BASE = { roam: 34, drift: 18, sway: 15, swim: 46 };
+          d.style.animationDelay = (i * -7) + "s";
+          d.style.animationDuration = ((BASE[item.motion] || 18) + i * 5) + "s";
+        }
+
+        // The inner element carries the per-copy depth fade AND the facing flip.
+        // Both have to live here rather than on `d`: a CSS animation owns the
+        // properties it animates, so a flip or an opacity set on the animated
+        // element is silently discarded the moment it starts moving. `swim`
+        // fades itself in and out on `d`, which only works because the depth
+        // opacity is one level down.
+        var art = document.createElement("div");
+        art.className = "decor-art";
+        // Later copies sit further back, so a stack reads as depth rather than
+        // identical cut-outs. Floored at 60% — with six kelp groves an unbounded
+        // fade left the last ones nearly invisible.
+        art.style.opacity = item.opacity * Math.max(0.6, 1 - i * 0.1);
+        // A creature with a front must face where it is going. `facing` art is
+        // drawn heading right, so it is mirrored only when it travels left —
+        // ignoring slot.flip entirely, which is what made the fish reverse.
+        var flip = item.facing ? goesLeft : !!slot.flip;
+        if (flip) art.style.transform = "scaleX(-1)";
+        art.innerHTML = item.svg;
+        d.appendChild(art);
         layer.appendChild(d);
       });
     });
@@ -2165,17 +2204,39 @@
     // home kelp + drifting creatures
     var KPATH = "M20 200 C7 150 30 120 17 88 C7 58 27 40 20 0 C28 42 34 72 22 102 C34 132 12 164 20 200Z";
     var kelp = $("kelpLayer");
-    var specs = [[4, 150, 0, .42], [16, 187, .8, .54], [34, 224, 1.6, .66], [58, 151, 2.4, .42], [78, 188, 3.2, .54], [90, 225, 4, .66]];
+    var KW = 40;                                  // .kelp width, kept in sync with css
+    // [ left%, height, animation delay, opacity, bottom ]
+    //
+    // Bottoms stay LOW — the strands are rooted at the very base of the screen,
+    // which is where they read best. An earlier attempt lifted them to ~70px to
+    // rescue them from the sand; that was the wrong lever, because they were
+    // being painted OVER by .seabed rather than sunk into it. The kelp layer now
+    // draws above the sand (see .kelp-layer), so low is both correct and fully
+    // visible. Slight per-strand variation keeps the row from looking milled.
+    var specs = [[4, 150, 0, .42, -4], [16, 187, .8, .54, -1], [34, 224, 1.6, .66, -6],
+                 [58, 151, 2.4, .42, -3], [78, 188, 3.2, .54, 0], [96, 225, 4, .66, -5]];
+    // A plain `left:X%` ignores the strand's own 40px width, so the outermost
+    // one used to start past the right edge and get sliced flat — a strand that
+    // looked cut in half, worse once the sway swung its top another ~14px out.
+    // Insetting by the same fraction of the width makes X% read as "X% of the
+    // way across", flush at 0 and 100 and clipping at neither end.
     specs.forEach(function (sp) {
       var d = document.createElement("div");
       d.className = "kelp";
-      d.style.left = sp[0] + "%"; d.style.height = sp[1] + "px";
+      d.style.left = "calc(" + sp[0] + "% - " + (KW * sp[0] / 100).toFixed(1) + "px)";
+      d.style.height = sp[1] + "px";
       d.style.animationDelay = sp[2] + "s"; d.style.opacity = sp[3];
+      d.style.bottom = sp[4] + "px";
       d.innerHTML = '<svg viewBox="0 0 40 200" preserveAspectRatio="none"><path d="' + KPATH + '"></path></svg>';
       kelp.appendChild(d);
     });
     var cb = $("creaturesBg");
-    var cspecs = [[18, 42, 1], [82, 58, 3], [12, 72, 4], [88, 30, 5], [70, 84, 6]];
+    // The barnacle cone used to drift at [70, 84, 6] — bottom-right, down among
+    // the kelp fringe. Emblem 6 is a bare flat-bottomed triangle, and sitting
+    // in a row of leaf-blade kelp it read as a snapped-off kelp tip rather than
+    // as a creature. Dropped rather than relocated: every other spot down there
+    // is kelp too, and the cone is the one emblem with no silhouette of its own.
+    var cspecs = [[18, 42, 1], [82, 58, 3], [12, 72, 4], [88, 30, 5]];
     cspecs.forEach(function (cs, i) {
       var d = document.createElement("div");
       d.className = "creature-bg";

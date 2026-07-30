@@ -48,10 +48,16 @@ b{ font-variant-numeric:tabular-nums; }
 @keyframes fadein{ from{ opacity:0;} to{ opacity:1;} }
 
 /* ---------------------------------------------------------- HOME --------- */
-.kelp-layer,.creatures-bg{ position:absolute; inset:0; z-index:1; pointer-events:none; }
-.kelp{ position:absolute; bottom:-4px; width:40px; transform-origin:bottom center;
+.creatures-bg{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+/* Above the seabed (z-index 1), not level with it. The kelp layer sits BEFORE
+   .seabed in the markup, so at equal z-index the sand painted straight over the
+   bottom of every strand — that, not their height, is why they vanished into it.
+   Plants growing out of the sand belong in front of it anyway. */
+.kelp-layer{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+/* bottom is set per strand in buildWater() so each stands on the domed sand */
+.kelp{ position:absolute; bottom:0; width:40px; transform-origin:bottom center;
   animation:kelpsway 7s ease-in-out infinite; }
-.kelp path{ fill:#123a34; }
+.kelp path{ fill:#1b4d43; }
 @keyframes kelpsway{ 0%,100%{ transform:rotate(-3.5deg) skewX(-4deg);} 50%{ transform:rotate(3.5deg) skewX(4deg);} }
 .creature-bg{ position:absolute; opacity:.14; animation:drift 14s ease-in-out infinite; }
 @keyframes drift{ 0%,100%{ transform:translate(0,0) rotate(0);} 50%{ transform:translate(10px,-12px) rotate(8deg);} }
@@ -61,17 +67,88 @@ b{ font-variant-numeric:tabular-nums; }
    Pieces hang off the left and right edges to frame the trail, never over it. */
 .decor-layer{ position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
 .decor{ position:absolute; }
+/* the flip lives here so the animation on .decor cannot overwrite it */
+.decor-art{ width:100%; height:100%; }
 .decor svg{ width:100%; height:100%; display:block; }
+
+/* a small sway on the spot — kept for anything that should breathe, not travel */
 .decor.drift{ animation:decorDrift 18s ease-in-out infinite; }
-@keyframes decorDrift{ 0%,100%{ transform:translateX(0) translateY(0);}
-                       50%{ transform:translateX(14px) translateY(-10px);} }
+@keyframes decorDrift{ 0%,100%{ transform:translate(0,0);}
+                       50%{ transform:translate(14px,-10px);} }
+
+/* shoal: a ONE-WAY crossing, not a there-and-back wander.
+   `roam` returns along its own path, which means a fish spends half its life
+   moving tail-first — no amount of mirroring fixes that, because the direction
+   of travel reverses mid-animation. So the school enters off one edge, crosses,
+   and leaves off the other, fading at both ends so the loop point is invisible.
+   Distances are in vw so the crossing spans the pool at any width. */
+.decor.swim{ animation:decorSwim 46s linear infinite; }
+@keyframes decorSwim{
+  0%   { transform:translate(-42vw,0)  ; opacity:0; }
+  7%   { transform:translate(-28vw,-6px); opacity:1; }
+  35%  { transform:translate(4vw,-22px) ; opacity:1; }
+  62%  { transform:translate(38vw,4px)  ; opacity:1; }
+  93%  { transform:translate(74vw,-12px); opacity:1; }
+  100% { transform:translate(88vw,-16px); opacity:0; }
+}
+.decor.swim.inward{ animation-name:decorSwimIn; }
+@keyframes decorSwimIn{
+  0%   { transform:translate(42vw,0)   ; opacity:0; }
+  7%   { transform:translate(28vw,-6px); opacity:1; }
+  35%  { transform:translate(-4vw,-22px); opacity:1; }
+  62%  { transform:translate(-38vw,4px) ; opacity:1; }
+  93%  { transform:translate(-74vw,-12px); opacity:1; }
+  100% { transform:translate(-88vw,-16px); opacity:0; }
+}
+
+/* starfish: a slow lean against the current. It is clamped to a rock, so it
+   leans and settles rather than travelling — but it does move, which is what it
+   needed next to the swaying kelp. */
+.decor.sway{ animation:decorSway 15s ease-in-out infinite; }
+@keyframes decorSway{
+  0%,100% { transform:rotate(0deg)    translate(0,0); }
+  28%     { transform:rotate(5.5deg)  translate(3px,-2px); }
+  55%     { transform:rotate(-1.5deg) translate(-2px,1px); }
+  78%     { transform:rotate(3deg)    translate(2px,-1px); }
+}
+
+/* jelly: a long wander across and up the pool, passing behind the map. Jellies
+   are the one piece that should look like it is going somewhere, so the path is
+   wide (up to ~140px across, ~90px of rise) and slow enough to stay calm. */
+.decor.roam{ animation:decorRoam 34s ease-in-out infinite; }
+@keyframes decorRoam{
+  0%   { transform:translate(0,0)         rotate(0deg); }
+  14%  { transform:translate(34px,-30px)  rotate(4deg); }
+  30%  { transform:translate(82px,-58px)  rotate(-3deg); }
+  46%  { transform:translate(126px,-84px) rotate(5deg); }
+  58%  { transform:translate(140px,-46px) rotate(-2deg); }
+  72%  { transform:translate(96px,-10px)  rotate(3deg); }
+  86%  { transform:translate(40px,14px)   rotate(-4deg); }
+  100% { transform:translate(0,0)         rotate(0deg); }
+}
+/* A piece pinned to the RIGHT edge must roam inward, or it slides off screen —
+   the right-hand jelly reached 486px on a 375px screen and was only hidden by
+   the layer's overflow:hidden, which is concealment, not a fix. Same path,
+   mirrored on x. */
+.decor.roam.inward{ animation-name:decorRoamIn; }
+@keyframes decorRoamIn{
+  0%   { transform:translate(0,0)          rotate(0deg); }
+  14%  { transform:translate(-34px,-30px)  rotate(-4deg); }
+  30%  { transform:translate(-82px,-58px)  rotate(3deg); }
+  46%  { transform:translate(-126px,-84px) rotate(-5deg); }
+  58%  { transform:translate(-140px,-46px) rotate(2deg); }
+  72%  { transform:translate(-96px,-10px)  rotate(-3deg); }
+  86%  { transform:translate(-40px,14px)   rotate(4deg); }
+  100% { transform:translate(0,0)          rotate(0deg); }
+}
 .decor-spark{ position:absolute; width:3px; height:3px; border-radius:50%;
   background:var(--gold); box-shadow:0 0 6px var(--gold); opacity:.5;
   animation:sparkFloat 9s ease-in-out infinite; }
 @keyframes sparkFloat{ 0%,100%{ transform:translateY(0); opacity:.15;}
                        50%{ transform:translateY(-26px); opacity:.6;} }
 @media (prefers-reduced-motion:reduce){
-  .decor.drift{ animation:none; } .decor-spark{ animation:none; opacity:.4; }
+  .decor.drift,.decor.roam,.decor.sway,.decor.swim{ animation:none; }
+  .decor-spark{ animation:none; opacity:.4; }
 }
 
 /* Album and rockpool live on the zone row, flanking the zone pill.
@@ -83,14 +160,32 @@ b{ font-variant-numeric:tabular-nums; }
    the fix costs no vertical space at all. */
 .maprow{ display:flex; align-items:center; justify-content:center; gap:8px;
   padding:0 var(--sp3); flex:0 0 auto; }
+/* Drawn as inline SVG rather than emoji: the shop button was a 🟩 green square,
+   which is the one colour in the app that belongs to nothing. These inherit the
+   palette through currentColor, so they cannot drift off-theme, and they render
+   identically everywhere instead of depending on a platform's emoji font. */
 .home-icon{ width:34px; height:34px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
-  background:rgba(23,41,42,.7); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
-  font-size:1rem; line-height:1; transition:transform .15s var(--ease-buoy); }
+  background:rgba(23,41,42,.7); box-shadow:inset 0 0 0 1px #2b4142; color:var(--aqua);
+  line-height:1; padding:6px; display:flex; align-items:center; justify-content:center;
+  transition:transform .15s var(--ease-buoy); }
 .home-icon:active{ transform:scale(.92); }
+.home-icon svg{ width:100%; height:100%; display:block; fill:currentColor; }
+.rock-icon{ color:#c98f9a; }   /* the anemone's own pink, as on the pool floor */
 
-.seabed{ position:absolute; left:0; right:0; bottom:0; height:70px; z-index:1;
-  background:linear-gradient(transparent, #14322c 40%, #163b32);
-  border-radius:50% 50% 0 0 / 26px 26px 0 0; box-shadow:0 -2px 20px rgba(20,60,48,.6); pointer-events:none; }
+/* Deeper than it was (70px): the floor decor is spread across the sand for a
+   sense of receding ground, and that only works if there is enough sand to
+   recede across. Anything sitting above this band stops reading as attached to
+   the bottom, so the band sets the ceiling for every grounded piece.
+   Note the dome: the 26px vertical radius means the sand's top edge is ~26px
+   LOWER at the far left and right than in the middle, which is why edge slots
+   are anchored lower than centre ones. */
+.seabed{ position:absolute; left:0; right:0; bottom:0; height:96px; z-index:1;
+  /* Translucent rather than solid, and it stays sheer for the first third. At
+     112px tall with an opaque body it swallowed the kelp: the shorter groves are
+     only ~140px, so over half of each sat inside the sand. Lower, softer, and
+     with the kelp now standing ON it rather than rooted under it. */
+  background:linear-gradient(transparent, rgba(20,50,44,.62) 42%, rgba(22,59,50,.9));
+  border-radius:50% 50% 0 0 / 26px 26px 0 0; box-shadow:0 -2px 20px rgba(20,60,48,.45); pointer-events:none; }
 
 /* The home depth-map is full-bleed at the bottom. Every control (Continue,
    Daily Challenge, settings) sits in .home-top, so nothing interactive goes
