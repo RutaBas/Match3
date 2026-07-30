@@ -77,6 +77,98 @@
   }
   function save() { lsSet(STORE, owned); }
 
+  // ------------------------------------------------------------ lanternfish --
+  // The one piece with real internal detail: a ribcage and a row of belly
+  // photophores. Both are built in a loop rather than typed out, because they
+  // are ~60 paths that only differ by a march along x — as a literal they would
+  // be unreadable and impossible to re-tune.
+  //
+  // Two colours, not one. Everything else in the catalog is a single-colour
+  // silhouette tinted by item.color, but a lanternfish that does not GLOW is
+  // just a fish, so the bones and light organs carry their own pale aqua while
+  // the body stays on currentColor.
+  //
+  // The ribs are clipped to the body outline instead of being length-matched to
+  // it by hand: the profile is a bezier, so any per-rib length table would drift
+  // out of true the moment the outline is nudged. The clip id is shared by every
+  // copy on screen, which is safe only because all copies clip to the same path.
+  //
+  // Drawn nose-RIGHT on purpose. `facing: true` tells the renderer the art has a
+  // front and mirrors it when the fish is travelling left; art drawn nose-left
+  // would swim backwards half the time.
+  var LANTERN = (function () {
+    // Deepest just behind the head, then a long taper to a NARROW peduncle at
+    // x=30. The waist is the whole silhouette: a body carried at full depth all
+    // the way to the fin reads as a blimp with a tail stuck on it.
+    var BODY = "M127 28 C121 17 112 11 97 9 C78 6 55 11 40 19 C36 21 33 23 30 25 " +
+               "L30 32 C33 34 36 36 40 39 C55 47 78 51 97 48 C112 46 121 39 127 28 Z";
+    var i, x, t, r;
+
+    // Ribcage. These SWEEP — each rib leaves the spine and curves back toward
+    // the tail, which is what makes it read as bone rather than as a grille.
+    // An earlier pass ran them straight up and down at even spacing and the
+    // fish looked like it was wearing a barcode.
+    //
+    // Every rib is drawn over-long and clipped to the outline rather than
+    // length-matched to it by hand: the profile is a bezier, so any per-rib
+    // length table would drift out of true the moment the outline is nudged.
+    var ribs = "";
+    for (i = 0; i < 13; i++) {
+      x = 98 - i * 4.8;
+      ribs += '<path d="M' + x.toFixed(1) + ' 26 Q' + (x - 4).toFixed(1) + ' 14 ' +
+                (x - 11).toFixed(1) + ' 3"/>' +
+              '<path d="M' + x.toFixed(1) + ' 30 Q' + (x - 4).toFixed(1) + ' 42 ' +
+                (x - 11).toFixed(1) + ' 53"/>';
+    }
+
+    // Photophore row along the lateral line. The size wobble is a fixed pattern
+    // rather than random: a decor piece has to look identical every time the
+    // home screen redraws, or the pool appears to twitch on every render.
+    var WOBBLE = [1, .5, .8, 1.5, .6, 1.3, .5, 1.1, .7, 1.4, .6, .9, 1.2, .5,
+                  1, .7, 1.3, .5, .9, 1.1, .6, .8];
+    var lamps = "", glow = "";
+    for (i = 0; i < WOBBLE.length; i++) {
+      x = 32 + i * 3.3;
+      t = i / (WOBBLE.length - 1);
+      r = (0.6 + 1.1 * t) * WOBBLE[i];
+      glow  += '<circle cx="' + x.toFixed(1) + '" cy="28" r="' + (r * 2.2).toFixed(2) + '"/>';
+      lamps += '<circle cx="' + x.toFixed(1) + '" cy="28" r="' + r.toFixed(2) + '"/>';
+    }
+
+    return '<svg viewBox="0 0 130 58">' +
+      '<defs><clipPath id="tpLanternBody"><path d="' + BODY + '"/></clipPath></defs>' +
+      // Fins first, so the body sits over their roots — a fin that starts at
+      // the outline instead of under it reads as glued on. Kept faint: they are
+      // the translucent part of the animal, and a solid fin out-weighs the glow.
+      '<g fill="currentColor" opacity=".38">' +
+        '<path d="M100 11 C96 1 86 -4 76 -2 C82 5 84 11 84 16 Z"/>' +     // dorsal
+        '<path d="M54 16 C50 11 45 9 41 10 C44 13 45 16 45 19 Z"/>' +     // adipose
+        '<path d="M31 28 L5 7 L17 28 L5 49 Z"/>' +                        // caudal
+        '<path d="M92 42 C89 52 81 58 72 57 C77 51 79 46 80 41 Z"/>' +    // pectoral
+        '<path d="M68 47 C66 54 60 58 54 57 C58 53 59 49 60 45 Z"/>' +    // pelvic
+        '<path d="M50 44 C47 51 40 55 34 54 C39 50 41 46 42 42 Z"/>' +    // anal
+      "</g>" +
+      '<path d="' + BODY + '" fill="currentColor"/>' +
+      '<g clip-path="url(#tpLanternBody)">' +
+        // gill plate + a soft dorsal sheen, so the flank is not one flat slab
+        '<path d="M97 4 C90 15 90 41 98 54 L130 54 L130 4 Z" fill="#ffffff" opacity=".06"/>' +
+        '<path d="M30 20 C60 8 95 5 127 24 L127 8 L30 14 Z" fill="#ffffff" opacity=".05"/>' +
+        '<g stroke="#7fe8d8" stroke-width="1.15" fill="none" stroke-linecap="round" ' +
+          'opacity=".45">' + ribs + "</g>" +
+        '<g fill="#8ff5e6" opacity=".16">' + glow + "</g>" +
+        '<g fill="#c9fff7">' + lamps + "</g>" +
+      "</g>" +
+      // Eye and cheek photophores ride OUTSIDE the clip: they sit on the head,
+      // where the outline is the thing they should read against.
+      '<circle cx="110" cy="26" r="8" fill="#a5f7ea"/>' +
+      '<circle cx="110" cy="26" r="4.1" fill="#0d2b2b"/>' +
+      '<g fill="#bafff2">' +
+        '<circle cx="99" cy="33" r="1.9"/><circle cx="102" cy="39" r="1.5"/>' +
+        '<circle cx="96" cy="38" r="1.3"/><circle cx="100" cy="44" r="1.4"/>' +
+        '<circle cx="94" cy="43" r="1.1"/>' +
+      "</g></svg>";
+  })();
+
   // side: which edge it hangs off, so pieces never stack on the same spot.
   // depth: paint order (lower is further back).
   var CATALOG = [
@@ -206,6 +298,25 @@
                { side: "right", x: 4,  bottom: 348, scale: 0.66 },
                { side: "left",  x: 2,  bottom: 132, scale: 0.72 },
                { side: "right", x: 3,  bottom: 420, scale: 0.58 } ]
+    },
+    {
+      id: "lanternfish", name: "Lanternfish", cost: 500, side: "left", depth: 4,
+      blurb: "Carries its own light down where there is none.",
+      svg: LANTERN,
+      // 78x35 — the art was first drawn at 130x58, a step up from the shoal, and
+      // at that size a single fish crowded the trail rather than passing behind
+      // it. Scaled to 60%, so it now sits UNDER the shoal's 104x48: read as one
+      // small deep-water fish a long way off, which is the right register for it.
+      // The viewBox is untouched; only the box it draws into shrank.
+      // Travels the same way — `swim`, a one-way crossing, with `facing` so it
+      // is mirrored to match its direction rather than swimming tail-first.
+      w: 78, h: 35, color: "#245c56", opacity: 0.72, motion: "swim", facing: true,
+      // Fewer copies than the shoal. Four fish in a cluster read as one shoal,
+      // but four lanternfish read as four lanternfish, and the whole point of
+      // the piece is that it is the rare thing you see once on a crossing.
+      slots: [ { side: "left",  x: 2, bottom: 232, scale: 1 },
+               { side: "right", x: 3, bottom: 384, scale: 0.78 },
+               { side: "left",  x: 4, bottom: 152, scale: 0.62 } ]
     },
     {
       id: "jelly", name: "Jelly Drift", cost: 200, side: "left", depth: 4,

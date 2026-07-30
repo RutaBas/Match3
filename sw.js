@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v40";   // v40: kelp not clipped at the edge; stray barnacle cone removed
+var CACHE_NAME = "tide-pool-v42";   // v42: Lanternfish scaled to 60% and repriced to 500
 
 var LOCAL_ASSETS = [
   "./",
