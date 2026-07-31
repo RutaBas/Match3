@@ -164,7 +164,10 @@ b{ font-variant-numeric:tabular-nums; }
    which is the one colour in the app that belongs to nothing. These inherit the
    palette through currentColor, so they cannot drift off-theme, and they render
    identically everywhere instead of depending on a platform's emoji font. */
-.home-icon{ width:27px; height:27px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
+/* 30px, not the 34px original or the 27px that followed it: at 27 the anemone
+   lost its silhouette to its own detail, and thinning it bought back only part
+   of that. Three pixels is cheap and the row still reads lighter than before. */
+.home-icon{ width:30px; height:30px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
   background:rgba(23,41,42,.7); box-shadow:inset 0 0 0 1px #2b4142; color:var(--aqua);
   line-height:1; padding:5px; display:flex; align-items:center; justify-content:center;
   transition:transform .15s var(--ease-buoy); }
@@ -208,21 +211,32 @@ b{ font-variant-numeric:tabular-nums; }
    left; Depth keeps a pill on the right because it is the one that changes
    under you rather than one you spend. */
 .statbar{ display:flex; align-items:center; justify-content:space-between;
-  margin:12px 2px 0; font-family:'Quicksand',sans-serif; font-weight:700; font-size:.74rem; }
+  margin:12px 0 0; font-family:'Quicksand',sans-serif; font-weight:700; font-size:.74rem; }
 /* sb- prefix: plain .stat/.stats are the win screen's score cards, and an
    unprefixed name here inherited their panel background and 8px padding. */
 .statbar .sb-stats{ display:flex; align-items:center; gap:12px; }
 /* line-height:1 — body's 1.5 makes an emoji span half again as tall as its glyph. */
 .statbar, .statbar .sb-stat, .statbar .sb-stat b{ line-height:1; }
-.statbar .sb-stat{ display:flex; align-items:center; gap:5px; color:var(--text); }
-.statbar .sb-stat svg{ width:13px; height:13px; fill:currentColor; opacity:.9; }
-.statbar .s-star{ color:var(--gold); font-size:.9rem; }
-.statbar .s-streak{ color:#d08a5e; }
+/* One size for the whole row: each mark is 1em of the stat's own font-size, so
+   the star, the flame and the shell cannot drift apart from each other or from
+   the number beside them. align-items:center puts all six on one axis. */
+.statbar .sb-stat{ display:flex; align-items:center; gap:5px; font-size:.86rem;
+  color:var(--gold); }
+.statbar .sb-stat svg{ width:1em; height:1em; fill:currentColor; }
+/* Optical sizing, not measured sizing: at a matched 1em the flame carries less
+   ink than the ★ glyph and reads lighter. A hair up evens their weight. */
+.statbar .s-streak svg{ width:1.05em; height:1.05em; }
 /* Pinned so the shell is the neutral spiral everywhere, not whichever colour
-   the platform's fallback emoji font happens to draw. */
-.statbar .s-shell{ font-size:.95rem;
+   the platform's fallback emoji font happens to draw. Sized down because a
+   colour emoji draws a bigger glyph inside the same em box than a text one:
+   matched to the star's font-size it reads half again as large. */
+.statbar .s-shell{ font-size:.72rem;
   font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; }
-.statbar b{ color:var(--gold); font-size:.74rem; }
+/* Absolute, not 1em — the numbers stay one size even where the mark beside
+   them is optically corrected. Text colour, matching the mode names: the marks
+   carry the gold, so the counts read as plain figures rather than three more
+   highlights competing with the badges below them. */
+.statbar .sb-stat b{ color:var(--text); font-size:.86rem; }
 .depth-stat{ display:flex; align-items:center; gap:6px; padding:4px 11px; border-radius:99px;
   background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142;
   font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); }
@@ -646,7 +660,9 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .mode.busy .m-badge{ color:var(--sub); }
 
 /* ---- Weekly Tide card + modal ---- */
-#btn-weekly .m-badge{ color:var(--aqua); }
+/* Weekly's badge used to be aqua at rest, which made it the odd one of three
+   and collided with .done's aqua — aqua now means cleared, and only that.
+   Kept for weight: .complete outranks .done, so all seven still reads gold. */
 #btn-weekly.complete .m-badge{ color:var(--gold); }
 .weekly-panel{ text-align:center; }
 .week-track{ display:flex; justify-content:center; gap:5px; margin-bottom:var(--sp3); }
