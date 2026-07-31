@@ -1,7 +1,7 @@
 /* Tide Pool service worker — NETWORK-FIRST app shell with cache fallback.
    Online play always gets the latest deployed version after a single reload;
    the cache exists purely so the game still opens offline. */
-var CACHE_NAME = "tide-pool-v47";   // v47: stat counts take the text colour, matching the mode names
+var CACHE_NAME = "tide-pool-v48";   // v48: shell count font on iOS; end screens scroll; Second Wind shows the balance
 
 var LOCAL_ASSETS = [
   "./",

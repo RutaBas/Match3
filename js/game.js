@@ -972,6 +972,9 @@
     $("rescue-score").textContent = have;
     $("rescue-target").textContent = goal;
     $("rescue-pct").textContent = pct + "%";
+    // The price is on the button; the balance belongs beside it, so the spend
+    // is a decision made with both numbers visible rather than from memory.
+    $("rescue-shells").textContent = ECON.balance();
     $("rescue-fill").style.width = "0%";
     $("rescue").hidden = false;
     requestAnimationFrame(function () {

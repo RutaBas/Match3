@@ -232,6 +232,10 @@ b{ font-variant-numeric:tabular-nums; }
    matched to the star's font-size it reads half again as large. */
 .statbar .s-shell{ font-size:.72rem;
   font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; }
+/* The emoji font must not reach the count beside it. Apple Color Emoji carries
+   its own digits — wide, differently spaced, and nothing like Quicksand — so on
+   iOS an inherited stack turned "2360" into four drifting glyphs. */
+.statbar .s-shell b{ font-family:'Quicksand',sans-serif; }
 /* Absolute, not 1em — the numbers stay one size even where the mark beside
    them is optically corrected. Text colour, matching the mode names: the marks
    carry the gold, so the counts read as plain figures rather than three more
@@ -728,6 +732,12 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .rescue-sub{ margin:0 0 var(--sp3); font-size:.9rem; color:var(--sub); }
 .rescue-need{ text-align:center; font-family:'Quicksand',sans-serif; font-weight:700;
   color:var(--aqua); margin-bottom:var(--sp3); }
+/* Sits between the two buttons, quieter than either: it informs the choice
+   rather than being one. Quicksand on the count so the emoji font cannot
+   reach the digits — see .statbar .s-shell b. */
+.rescue-bal{ margin:2px 0 var(--sp2); font-size:.78rem; color:var(--sub);
+  font-family:'Quicksand',sans-serif; font-weight:600; }
+.rescue-bal b{ color:var(--gold); font-family:'Quicksand',sans-serif; }
 #rescue .wide{ width:100%; margin-bottom:var(--sp2); }
 
 /* ---------------------------------------------------- WIN / LOSE --------- */
@@ -738,8 +748,22 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
 .hud .bar i{ display:block; height:100%; background:linear-gradient(90deg,var(--aqua),var(--gold)); }
 .hud .mv{ font-size:.85rem; color:var(--text); }
 
-.center{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+/* Scrolls once it outgrows the viewport. The win screen is variable height — a
+   logged creature adds a card, the star bands add three rows — and on a short
+   phone that pushed Map / Next Depth off the bottom with no way to reach them,
+   because body sets overflow:hidden and .screen is position:fixed.
+   `safe center` keeps the centring when it fits but degrades to flex-start when
+   it does not, so overflow never lands above the scrollable area. */
+.center{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  display:flex; flex-direction:column; align-items:center; justify-content:safe center;
   padding:var(--sp4); text-align:center; z-index:5; max-width:420px; margin:0 auto; width:100%; }
+/* Older engines ignore `safe`; flex-start plus auto margins centres there too. */
+@supports not (justify-content:safe center){
+  .center{ justify-content:flex-start; }
+  .center > :first-child{ margin-top:auto; }
+  .center > :last-child{ margin-bottom:auto; }
+}
 .badge{ width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   background:radial-gradient(circle at 40% 35%, #eadfb0, var(--gold)); box-shadow:0 0 40px rgba(203,178,122,.6);
   font-size:2.6rem; animation:badgepop .6s var(--ease-buoy), badgeBob 3.2s ease-in-out .6s infinite; }
