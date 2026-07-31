@@ -117,7 +117,47 @@ function round60(x) { return Math.round(x / 60) * 60; }
 // up as you descend: gentle at Depth 1, full-challenge by the last Depth. Because
 // winTarget <= certified target <= an exhibited achievable line, every Depth stays
 // provably winnable; the certification (tier grading) still uses the certified target.
-function winTargetFor(certTarget, depth, tier) {
+// The hardest ceiling a win target is ever allowed to sit at, as a fraction of
+// the exhibited reachable maximum M.
+//
+// WHY THIS EXISTS. The ramp below scales the target against the CERTIFIED line,
+// which says nothing about how close that line is to the theoretical best. On
+// hard Depths the two nearly coincide, and the result (measured 2026-07-30 over
+// all 250 shipped Depths) was that a hard Depth asked for a median 53% of the
+// maximum possible score, p90 70%, worst 84% — while easy asked 5% and medium
+// 15%. Since the maximum is itself a deep-cascade line, "win" on those Depths
+// meant "find the one enormous cascade": across the campaign the single biggest
+// move carried a median 66% of the winning score, and 59 Depths needed one move
+// worth 80%+ of the whole run. That is the "I was at 1320/12840 with one move
+// left and still won" report, and it is equally the reason a player who does not
+// spot that move cannot win at all.
+//
+// Clamping the TARGET rather than capping the cascade multiplier is what keeps
+// this safe. The winnability guarantee is winTarget <= certTarget <= M, so
+// LOWERING winTarget preserves it for free — the same already-certified line
+// still clears the lower bar, with no re-grading and no board changes. Capping
+// the multiplier instead lowers M, which can drop it under a frozen target and
+// make a shipped Depth unwinnable; measured at a 3x cap, 11 of 250 broke.
+//
+// CHOOSING THE NUMBER. What matters is not the outliers but the tier's calibration
+// against ordinary play. Measured over the shipped campaign, a greedy line — take
+// the best-looking move each turn, no lookahead — scores a median 5% of the max on
+// easy, 17% on medium and 25% on hard. Easy and medium targets sat AT that (5% and
+// 15%), and greedy duly cleared 100% and 58% of them. Hard sat at 53%, roughly
+// double what ordinary play produces, and greedy cleared 1 of 96. That gap is the
+// whole problem: the missing 75% had to arrive in a single cascade.
+//
+// Greedy is a floor, not a model of a real player (a human with hints beats greedy
+// and loses to the solver), so the target is not to make greedy win outright but to
+// bring hard back within reach of it. Clamp -> greedy win rate on hard: 55% -> 1%,
+// 40% -> 6%, 35% -> 13%, 30% -> 30%, 25% -> 51%. 0.35 keeps hard genuinely hard
+// while ending "find the one cascade or lose".
+//
+// Raise this number to make the deep campaign harder again. It only ever binds
+// on Depths that were asking for more than this share; nothing else moves.
+var CEILING_FRACTION = 0.35;
+
+function winTargetFor(certTarget, depth, tier, M) {
   // FROZEN ramp: 0.35 at Depth 1 -> 1.0 at Depth 24, anchored to 24 forever so
   // extending the campaign never changes shipped targets.
   //
@@ -132,6 +172,12 @@ function winTargetFor(certTarget, depth, tier) {
   var wt = round60(certTarget * f);
   if (wt < 60) wt = 60;
   if (wt > certTarget) wt = certTarget;
+  // never ask for more than CEILING_FRACTION of what is actually reachable
+  if (M) {
+    var ceiling = round60(M * CEILING_FRACTION);
+    if (ceiling < 60) ceiling = 60;
+    if (wt > ceiling) wt = ceiling;
+  }
   return wt;
 }
 
@@ -143,10 +189,17 @@ function winTargetFor(certTarget, depth, tier) {
 //   star1 = winTarget (you win)  ·  star2 = 1.15x win  ·  star3 = 1.35x win
 // clamped to the exhibited reachable max M so 3 stars is always provably
 // attainable, and to the certified score so it never demands perfect play.
-function starThresholds(level, winTarget) {
+// The exhibited reachable maximum M, split out from starThresholds because the
+// win target now needs it too (see CEILING_FRACTION) and the search behind it is
+// far too expensive to run twice per Depth.
+function exhibitedMax(level) {
   var cap = Math.min(generator.TIERS[level.tier].nodeCap, STAR_NODE_CAP);
   var bs = solver.bestScore(level, { allowSpecials: true, nodeCap: cap });
-  var M = Math.max(bs.score, level.target); // exhibited reachable max (>= certTarget)
+  return { M: Math.max(bs.score, level.target), overflow: !!bs.overflow };
+}
+
+function starThresholds(level, winTarget, ex) {
+  var M = ex.M;
   var star2 = round60(winTarget * 1.15);
   var star3 = round60(winTarget * 1.35);
   var ceil = Math.min(M, level.target);     // never above "good play", never above max
@@ -157,7 +210,7 @@ function starThresholds(level, winTarget) {
   if (star3 <= star2) star3 = star2 + 60;
   if (star3 > M) star3 = round60(M);
   if (star2 > star3) star2 = star3;
-  return { star2: star2, star3: star3, maxScore: M, overflow: !!bs.overflow };
+  return { star2: star2, star3: star3, maxScore: M, overflow: ex.overflow };
 }
 
 function build() {
@@ -218,8 +271,9 @@ function build() {
       throw new Error("Depth " + depth + " winning line failed replay");
     }
 
-    var winTarget = winTargetFor(lvl.target, depth, tier);
-    var st = starThresholds(lvl, winTarget);
+    var ex = exhibitedMax(lvl);
+    var winTarget = winTargetFor(lvl.target, depth, tier, ex.M);
+    var st = starThresholds(lvl, winTarget, ex);
 
     levels.push({
       depth: depth,

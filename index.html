@@ -35,7 +35,6 @@
     <div class="kelp-layer" id="kelpLayer" aria-hidden="true"></div>
     <div class="creatures-bg" id="creaturesBg" aria-hidden="true"></div>
     <div class="seabed" aria-hidden="true"></div>
-    <button id="btn-settings" class="home-gear" aria-label="Settings">&#9881;</button>
     <div class="decor-layer" id="decorLayer" aria-hidden="true"></div>
 
     <div class="home-content">
@@ -44,30 +43,46 @@
           <span class="pearl" aria-hidden="true"></span>
           <div class="title">TIDE&nbsp;POOL</div>
           <span class="pearl" aria-hidden="true"></span>
+          <button id="btn-settings" class="home-gear" aria-label="Settings">&#9881;</button>
         </div>
         <div class="tag">a match-3 descent</div>
+        <!-- Currencies read left, position reads right: Depth is a place you are,
+             not a thing you own, so it gets its own pill instead of a fourth chip. -->
         <div class="statbar">
-          <span>&#11088; <b id="stat-stars">0</b></span>
-          <span>&#127754; Depth <b id="stat-depth">1</b></span>
-          <span>&#128293; <b id="stat-streak">0</b></span>
-          <span>&#128026; <b id="stat-shells">0</b></span>
+          <div class="sb-stats">
+            <span class="sb-stat s-star">&#9733;<b id="stat-stars">0</b></span>
+            <span class="sb-stat s-streak">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2.5c.6 3.4-1.2 4.7-2.9 6.4C8.2 10.8 6.5 12.6 6.5 15a5.5 5.5 0 0 0 11 0c0-2.4-1.1-3.9-2.2-5.3-.2 1.2-.9 2-1.8 2.2.7-2.6-.2-6.9-.5-9.4z"/></svg>
+              <b id="stat-streak">0</b>
+            </span>
+            <span class="sb-stat s-shell">&#128026;<b id="stat-shells">0</b></span>
+          </div>
+          <span class="depth-stat"><i aria-hidden="true"></i>Depth <b id="stat-depth">1</b></span>
         </div>
-        <button class="play" id="btn-continue">Continue</button>
+        <!-- Icons rather than emoji: the three mode glyphs were the last emoji in
+             the chrome, and they set the row's height by stacking above the label.
+             Side by side, the same row is a line shorter. -->
         <div class="modes">
           <button class="mode" id="btn-challenge">
-            <span class="m-ic">&#127919;</span>
-            <span class="m-name" id="ch-name">Daily</span>
-            <span class="m-badge" id="ch-reward">+100&#128026;</span>
+            <span class="m-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/></svg></span>
+            <span class="m-txt">
+              <span class="m-name" id="ch-name">Daily</span>
+              <span class="m-badge" id="ch-reward">+100&#128026;</span>
+            </span>
           </button>
           <button class="mode" id="btn-weekly">
-            <span class="m-ic">&#127754;</span>
-            <span class="m-name">Weekly</span>
-            <span class="m-badge" id="wk-reward">0/7</span>
+            <span class="m-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5c2-2.2 4-2.2 6 0s4 2.2 6 0 4-2.2 6 0"/><path d="M3 15.5c2-2.2 4-2.2 6 0s4 2.2 6 0 4-2.2 6 0"/></svg></span>
+            <span class="m-txt">
+              <span class="m-name">Weekly</span>
+              <span class="m-badge" id="wk-reward">0/7</span>
+            </span>
           </button>
           <button class="mode" id="btn-trench">
-            <span class="m-ic">&#127786;</span>
-            <span class="m-name">Trench</span>
-            <span class="m-badge" id="tr-best">new</span>
+            <span class="m-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v8a6 6 0 0 0 12 0V4"/></svg></span>
+            <span class="m-txt">
+              <span class="m-name">Trench</span>
+              <span class="m-badge" id="tr-best">new</span>
+            </span>
           </button>
         </div>
       </div>
@@ -97,6 +112,7 @@
           </svg>
         </button>
       </div>
+      <button class="play" id="btn-continue">Continue</button>
       <div class="trail" id="trail">
         <div class="trail-inner" id="trailInner"></div>
       </div>

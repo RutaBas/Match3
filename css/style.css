@@ -164,9 +164,9 @@ b{ font-variant-numeric:tabular-nums; }
    which is the one colour in the app that belongs to nothing. These inherit the
    palette through currentColor, so they cannot drift off-theme, and they render
    identically everywhere instead of depending on a platform's emoji font. */
-.home-icon{ width:34px; height:34px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
+.home-icon{ width:27px; height:27px; flex:0 0 auto; border:0; cursor:pointer; border-radius:50%;
   background:rgba(23,41,42,.7); box-shadow:inset 0 0 0 1px #2b4142; color:var(--aqua);
-  line-height:1; padding:6px; display:flex; align-items:center; justify-content:center;
+  line-height:1; padding:5px; display:flex; align-items:center; justify-content:center;
   transition:transform .15s var(--ease-buoy); }
 .home-icon:active{ transform:scale(.92); }
 .home-icon svg{ width:100%; height:100%; display:block; fill:currentColor; }
@@ -196,19 +196,40 @@ b{ font-variant-numeric:tabular-nums; }
 #screen-home{ padding-bottom:0; }
 .home-content{ position:relative; z-index:5; flex:1; display:flex; flex-direction:column; min-height:0; }
 .home-top{ text-align:center; padding:calc(var(--safe-t) + 20px) var(--sp3) var(--sp2); }
-.title-row{ display:flex; align-items:center; justify-content:center; gap:14px; }
+.title-row{ position:relative; display:flex; align-items:center; justify-content:center; gap:14px; }
 .pearl{ flex:0 0 auto; width:16px; height:16px; border-radius:50%;
   background:radial-gradient(circle at 35% 30%, #fff, #cfe6df 45%, #8fb7ad);
   box-shadow:0 0 18px rgba(143,183,173,.8); }
 .home-top .title{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:2.15rem;
   letter-spacing:.05em; color:var(--text); text-shadow:0 2px 22px rgba(91,182,166,.55); line-height:1; }
 .home-top .tag{ color:var(--aqua); font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; margin-top:4px; }
-.statbar{ display:flex; justify-content:center; gap:var(--sp3); margin-top:var(--sp3);
-  font-family:'Quicksand'; font-weight:600; font-size:.74rem; }
-.statbar span{ display:flex; align-items:center; gap:4px; color:var(--text);
-  background:rgba(30,53,54,.6); padding:5px 10px; border-radius:99px; box-shadow:inset 0 0 0 1px #2b4142; }
-.statbar b{ color:var(--gold); }
-.play{ margin:var(--sp3) auto 0; display:block; border:0; cursor:pointer;
+/* Four identical pills gave equal billing to three currencies and a location,
+   and cost a full row of height for it. The currencies now sit bare on the
+   left; Depth keeps a pill on the right because it is the one that changes
+   under you rather than one you spend. */
+.statbar{ display:flex; align-items:center; justify-content:space-between;
+  margin:12px 2px 0; font-family:'Quicksand',sans-serif; font-weight:700; font-size:.74rem; }
+/* sb- prefix: plain .stat/.stats are the win screen's score cards, and an
+   unprefixed name here inherited their panel background and 8px padding. */
+.statbar .sb-stats{ display:flex; align-items:center; gap:12px; }
+/* line-height:1 — body's 1.5 makes an emoji span half again as tall as its glyph. */
+.statbar, .statbar .sb-stat, .statbar .sb-stat b{ line-height:1; }
+.statbar .sb-stat{ display:flex; align-items:center; gap:5px; color:var(--text); }
+.statbar .sb-stat svg{ width:13px; height:13px; fill:currentColor; opacity:.9; }
+.statbar .s-star{ color:var(--gold); font-size:.9rem; }
+.statbar .s-streak{ color:#d08a5e; }
+/* Pinned so the shell is the neutral spiral everywhere, not whichever colour
+   the platform's fallback emoji font happens to draw. */
+.statbar .s-shell{ font-size:.95rem;
+  font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; }
+.statbar b{ color:var(--gold); font-size:.74rem; }
+.depth-stat{ display:flex; align-items:center; gap:6px; padding:4px 11px; border-radius:99px;
+  background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142;
+  font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); }
+.depth-stat i{ width:6px; height:6px; border-radius:50%; background:var(--aqua);
+  box-shadow:0 0 8px var(--aqua); }
+.depth-stat b{ color:var(--text); letter-spacing:0; }
+.play{ margin:12px auto 0; display:block; border:0; cursor:pointer;
   font-family:'Quicksand',sans-serif; font-weight:700; font-size:1.02rem; color:#06201c;
   background:linear-gradient(180deg,#6fc9bb,var(--aqua)); padding:13px 30px; border-radius:99px;
   box-shadow:0 6px 20px rgba(91,182,166,.45), inset 0 1px 0 rgba(255,255,255,.4);
@@ -603,17 +624,22 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
    changing information (today's payout, 3/7 tides cleared, best rung). The
    descriptions moved to the buttons' aria-labels, so nothing is lost to screen
    readers. */
-.modes{ display:flex; gap:7px; margin:10px auto 0; max-width:320px; width:100%; }
-.mode{ flex:1 1 0; min-width:0; border:0; cursor:pointer; padding:7px 4px 6px; border-radius:13px;
+.modes{ display:flex; gap:7px; margin:12px auto 0; width:100%; }
+.mode{ flex:1 1 0; min-width:0; border:0; cursor:pointer; padding:7px 8px; border-radius:12px;
   background:rgba(30,53,54,.72); box-shadow:inset 0 0 0 1px #2b4142; color:var(--text);
-  font-family:'Nunito Sans',sans-serif;
-  display:flex; flex-direction:column; align-items:center; gap:1px; line-height:1.2;
+  font-family:'Nunito Sans',sans-serif; text-align:left;
+  display:flex; flex-direction:row; align-items:center; gap:7px; line-height:1.15;
   transition:transform .15s var(--ease-buoy); }
 .mode:active{ transform:scale(.95); }
-.mode .m-ic{ font-size:1.1rem; }
-.mode .m-name{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.76rem;
+.mode .m-ic{ flex:0 0 auto; width:22px; height:22px; border-radius:50%;
+  background:rgba(15,31,31,.6); box-shadow:inset 0 0 0 1px #2b4142;
+  display:flex; align-items:center; justify-content:center; }
+.mode .m-ic svg{ width:13px; height:13px; fill:none; stroke:var(--aqua);
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.mode .m-txt{ min-width:0; }
+.mode .m-name{ display:block; font-family:'Quicksand',sans-serif; font-weight:700; font-size:.74rem;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.mode .m-badge{ font-family:'Quicksand',sans-serif; font-weight:700; font-size:.66rem;
+.mode .m-badge{ display:block; font-family:'Quicksand',sans-serif; font-weight:700; font-size:.62rem;
   color:var(--gold); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 .mode.done{ opacity:.62; }
 .mode.done .m-badge{ color:var(--aqua); }
@@ -747,11 +773,14 @@ body.claw-armed #board .tile .blob{ filter:brightness(1.08); }
   100%{ transform:translateY(-108vh) translateX(16px); opacity:0;} }
 
 /* ---- settings (gear + modal + toggle) ---- */
-.home-gear{ position:absolute; top:calc(var(--safe-t) + 12px); right:14px; z-index:8;
-  width:40px; height:40px; border:0; border-radius:50%; background:rgba(30,53,54,.7);
-  box-shadow:inset 0 0 0 1px #2b4142; color:var(--text); font-size:1.25rem; cursor:pointer;
+/* Rides the wordmark's own line instead of the screen corner, so the title
+   block reads as one row rather than a heading with a stray satellite. */
+.home-gear{ position:absolute; top:50%; right:0; transform:translateY(-50%); z-index:8;
+  width:34px; height:34px; border:0; border-radius:50%; background:rgba(30,53,54,.7);
+  box-shadow:inset 0 0 0 1px #2b4142; color:var(--text); font-size:1.1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; line-height:1;
   transition:transform .25s var(--ease-buoy); }
-.home-gear:active{ transform:rotate(60deg) scale(.92); }
+.home-gear:active{ transform:translateY(-50%) rotate(60deg) scale(.92); }
 .settings-panel{ text-align:left; }
 .settings-panel > b{ text-align:left; }
 .setting-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 2px 14px;

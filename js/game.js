@@ -258,25 +258,48 @@
     }
   }
 
-  // Signature of a depth's DEFINITION (board+refill+moves+target). A mid-level
-  // save stores it; if a shipped rebalance changes that depth, the stale save is
-  // discarded (the depth restarts fresh) instead of resuming against the wrong
-  // level. tp-progress (stars/unlocked/streak) is never touched by this.
-  function levelSig(m) {
-    var s = JSON.stringify({ b: m.board, r: m.refill, mv: m.moves, t: m.target });
+  // Signature of a depth's PUZZLE — board, refill queue, move budget. A mid-level
+  // save stores it; if a shipped rebalance changes the puzzle under a save, that
+  // save is discarded (the depth restarts fresh) instead of resuming against the
+  // wrong level. tp-progress (stars/unlocked/best/streak) is never touched by this.
+  //
+  // The TARGET is deliberately NOT in the signature. It used to be, and that made
+  // the save fragile in a way it never needed to be: retuning a win bar leaves the
+  // board, the queue and the budget identical, so the save is still perfectly
+  // valid — it just finishes against a different number. Hashing the target threw
+  // away a legitimate in-progress game every time a Depth was rebalanced, which is
+  // exactly what the 2026-07-30 hard-target clamp would have done to 96 Depths.
+  function hash(s) {
     var h = 5381;
     for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
     return h.toString(36);
   }
+  function levelSig(m) {
+    return hash(JSON.stringify({ b: m.board, r: m.refill, mv: m.moves }));
+  }
+  // The pre-2026-07-31 formula. Saves already on disk carry one of these, so it is
+  // still accepted on resume — dropping the target from the hash must not itself
+  // invalidate every save it was meant to protect. `t` is passed in because a
+  // rebalanced Depth records what it used to ask for (levels.js prevTarget), and a
+  // save written before that rebalance was hashed against the OLD number.
+  function legacyLevelSig(m, t) {
+    return hash(JSON.stringify({ b: m.board, r: m.refill, mv: m.moves, t: t }));
+  }
+  function sigOk(sv, m) {
+    if (!m) return false;
+    if (sv.sig === levelSig(m)) return true;              // written since the change
+    if (sv.sig === legacyLevelSig(m, m.target)) return true;   // written before it
+    return m.prevTarget !== undefined &&                  // ...on a rebalanced Depth
+           sv.sig === legacyLevelSig(m, m.prevTarget);
+  }
   function saveMatchesLevel(sv) {
-    var m = metaFor(sv.depth);
-    return !!m && sv.sig === levelSig(m);
+    return sigOk(sv, metaFor(sv.depth));
   }
 
   function resumeSave(sv) {
     var m = metaFor(sv.depth);
     if (!m) return false;
-    if (sv.sig !== levelSig(m)) { lsDel("tp-save"); return false; }
+    if (!sigOk(sv, m)) { lsDel("tp-save"); return false; }
     G.depth = sv.depth; G.meta = m;
     G.board = { rows: m.board.rows, cols: m.board.cols, grid: cloneGrid(sv.board.grid) };
     G.refill = m.refill;
@@ -356,7 +379,7 @@
     if (keepSave) lsSet("tp-save", keepSave); // put the campaign save back untouched
     else lsDel("tp-save");
     updateHUD();
-    toast(slot.day + "'s tide — Depth " + slot.depth +
+    toast(slot.day + "'s tide is in" +
           (slot.done ? " (already cleared)" : " · +" + st.slotReward + " shells"));
   }
 
@@ -411,7 +434,9 @@
     document.querySelector("#screen-win .win-h").textContent = "Deeper!";
     document.querySelector("#screen-win .win-sub").innerHTML =
       'The Trench &mdash; rung <b id="win-depth2">' + rung + "</b> cleared";
-    $("win-depth").textContent = rung;
+    // written whole, because a tide win may have left a named chip here
+    document.querySelector("#screen-win .hud .depth").innerHTML =
+      'Trench <b id="win-depth">' + rung + "</b>";
     var stars = $("win-stars"); stars.innerHTML = "";
     var earned = starsFor(starValue());
     for (var i = 1; i <= 3; i++) {
@@ -869,8 +894,12 @@
         (s.done ? "done" : s.isToday ? "today" : s.unlocked ? "open" : "locked");
       b.dataset.slot = s.index;
       if (!s.unlocked) b.disabled = true;
+      // The slot used to print its Depth here, which handed the player the one
+      // thing a tide is meant to keep back. The payout is the useful number
+      // anyway — it tells you what the slot is worth, not what it is.
       b.innerHTML = '<span class="wd">' + s.day + '</span>' +
-                    '<span class="wn">' + (s.unlocked ? s.depth : "&#128274;") + '</span>' +
+                    '<span class="wn">' +
+                      (s.unlocked ? "+" + st.slotReward : "&#128274;") + '</span>' +
                     '<span class="wm">' + (s.done ? "&#10003;" : s.unlocked ? "&#127754;" : "") + '</span>';
       track.appendChild(b);
     });
@@ -1246,8 +1275,41 @@
   }
 
   // ------------------------------------------------------------- HUD --
+  // WHICH Depth a tide is built on is deliberately not shown.
+  //
+  // A Daily or Weekly tide is a known Depth recoloured by a date-seeded colour
+  // permutation, so it is genuinely a fresh puzzle to solve — but the moment the
+  // screen says "Depth 37" the player reads it as a Depth they already cleared
+  // and plays it as a re-run. Naming the tide instead of its Depth costs nothing
+  // (the underlying level is still whatever it was) and keeps the thing feeling
+  // like its own puzzle, which is what it actually is.
+  //
+  // Returns null for anything that has no reason to hide: the campaign names its
+  // Depth, and a Trench rung IS its number.
+  function tideLabel() {
+    if (G.trench) return null;
+    if (G.weekly !== null && G.weekly !== undefined) {
+      var st = ECON ? ECON.weeklyState(TOTAL) : null;
+      var day = st && st.slots[G.weekly] ? st.slots[G.weekly].day : null;
+      return day ? day + "'s Tide" : "Weekly Tide";
+    }
+    if (G.challenge) return "Tide #" + (ECON ? ECON.tideNumber() : 0);
+    return null;
+  }
+
+  // The level chip on the win/lose screens. The <b> is kept alive under its usual
+  // id whether or not the level is named, because several win paths address it
+  // directly by id and would throw on a chip that had dropped it.
+  function setLevelChip(sel, bid, n) {
+    var tide = tideLabel();
+    document.querySelector(sel).innerHTML = tide
+      ? tide + ' <b id="' + bid + '" hidden></b>'
+      : 'Depth <b id="' + bid + '">' + n + "</b>";
+  }
+
   function updateHUD() {
-    $("depthPill").textContent = G.trench ? ("Trench " + G.trench) : ("Depth " + G.depth);
+    $("depthPill").textContent = tideLabel() ||
+      (G.trench ? ("Trench " + G.trench) : ("Depth " + G.depth));
     var left = Math.max(0, G.moves - G.movesUsed);
     $("movesLeft").textContent = left;
     document.querySelector(".moves-pill").classList.toggle("low", left <= 1);
@@ -1324,7 +1386,8 @@
     // the headline stat is whatever the Depth actually asked of you
     document.querySelectorAll("#screen-win .stat .l")[0].textContent =
       isCollect() ? "Collected" : "Score";
-    $("win-depth").textContent = G.depth;
+    // written whole, because a tide win may have left a named chip here
+    setLevelChip("#screen-win .hud .depth", "win-depth", G.depth);
     $("win-depth2").textContent = G.depth;
     var stars = $("win-stars"); stars.innerHTML = "";
     for (var i = 1; i <= 3; i++) {
@@ -1383,8 +1446,6 @@
   // Challenge win: campaign progress/streak/save untouched; the +100 reward is
   // claimable once per day (replays after claiming are just for glory).
   function winChallenge() {
-    $("win-depth").textContent = G.depth;
-    $("win-depth2").textContent = G.depth;
     var stars = $("win-stars"); stars.innerHTML = "";
     for (var i = 1; i <= 3; i++) {
       var sp = document.createElement("span");
@@ -1400,9 +1461,10 @@
     $("win-find").hidden = true;
     document.querySelector("#screen-win .win-h").textContent = "Tide mastered!";
     // keep id="win-depth2" alive — the campaign win() writes to it by id
+    setLevelChip("#screen-win .hud .depth", "win-depth", G.depth);
     document.querySelector("#screen-win .win-sub").innerHTML =
       'Daily Tide #' + (ECON ? ECON.tideNumber() : 0) +
-      ' &mdash; Depth <b id="win-depth2">' + G.depth + "</b>";
+      ' cleared <b id="win-depth2" hidden></b>';
     var rw = ECON ? ECON.claimChallenge() : null;
     if (rw) {
       $("reward-total").textContent = rw.amount;
@@ -1429,7 +1491,7 @@
     var st = ECON ? ECON.weeklyState(TOTAL) : null;
     var dayName = st ? st.slots[slotIndex].day : "";
 
-    $("win-depth").textContent = G.depth;
+    setLevelChip("#screen-win .hud .depth", "win-depth", G.depth);
     var stars = $("win-stars"); stars.innerHTML = "";
     for (var i = 1; i <= 3; i++) {
       var sp = document.createElement("span");
@@ -1448,7 +1510,7 @@
       (rw && rw.complete) ? "Full tide!" : "Tide cleared!";
     // keep id="win-depth2" alive — the campaign win() writes to it by id
     document.querySelector("#screen-win .win-sub").innerHTML =
-      "Weekly Tide &middot; " + dayName + " &mdash; Depth <b id=\"win-depth2\">" + G.depth + "</b>";
+      "Weekly Tide &middot; " + dayName + " cleared <b id=\"win-depth2\" hidden></b>";
 
     if (rw) {
       var bits = [rw.slot + " for " + dayName];
@@ -1584,7 +1646,7 @@
     else if (pct >= 70) { head = "Almost surfaced"; msg = "You've got the rhythm now. One more dive."; }
     else if (pct >= 40) { head = "Washed out"; msg = "Regroup and try a fresh line down."; }
     else { head = "Washed out"; msg = "Shake off the salt and dive again."; }
-    $("lose-depth").textContent = G.depth;
+    setLevelChip("#screen-lose .hud .depth", "lose-depth", G.depth);
     $("lose-h").textContent = head;
     $("lose-msg").textContent = msg;
     $("lose-target").textContent = goal;
